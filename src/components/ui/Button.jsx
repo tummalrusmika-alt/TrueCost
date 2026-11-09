@@ -5,6 +5,7 @@ function Button({
   disabled = false,
   variant = 'primary',
   type = 'button',
+  block = false,
 }) {
   const base =
     'px-6 py-3 rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
@@ -19,7 +20,7 @@ function Button({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`${base} ${styles[variant] || styles.primary}`}
+      className={`${base} ${styles[variant] || styles.primary} ${block ? 'w-full' : ''}`}
     >
       {children}
     </button>
