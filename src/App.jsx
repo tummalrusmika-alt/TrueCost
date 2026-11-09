@@ -1,20 +1,25 @@
 
+import { useState } from 'react'
+import LoanInput from './components/screens/LoanInput'
+
 function App() {
+  const [currentScreen, setCurrentScreen] = useState('home')
+
+  if (currentScreen === 'loan') {
+    return <LoanInput />
+  }
+
   return (
     <div className="min-h-screen bg-page text-ink font-sans">
-      {/* Header */}
       <header className="bg-white border-b border-line">
         <div className="max-w-6xl mx-auto px-6 py-5">
-          <h1 className="text-2xl font-bold text-brand">
-            TrueCost
-          </h1>
+          <h1 className="text-2xl font-bold text-brand">TrueCost</h1>
           <p className="text-sm text-muted mt-1">
             Understand your loan before you borrow.
           </p>
         </div>
       </header>
 
-      {/* Main content */}
       <main className="max-w-4xl mx-auto px-6 py-16">
         <section className="text-center">
           <span className="inline-block bg-brand-tint text-brand rounded-full px-4 py-2 text-sm font-semibold">
@@ -31,6 +36,7 @@ function App() {
           </p>
 
           <button
+            onClick={() => setCurrentScreen('loan')}
             className="mt-8 bg-brand hover:bg-brand-dark text-white font-semibold px-8 py-3 rounded-xl transition-colors"
             type="button"
           >
@@ -38,30 +44,23 @@ function App() {
           </button>
         </section>
 
-        {/* Feature cards */}
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-16">
           <div className="bg-white border border-line rounded-xl shadow-sm p-6">
-            <h3 className="font-bold text-lg text-brand">
-              Loan Calculator
-            </h3>
+            <h3 className="font-bold text-lg text-brand">Loan Calculator</h3>
             <p className="text-muted mt-3 text-sm">
               Calculate EMI, interest, fees and the actual amount you receive.
             </p>
           </div>
 
           <div className="bg-white border border-line rounded-xl shadow-sm p-6">
-            <h3 className="font-bold text-lg text-brand">
-              Affordability Check
-            </h3>
+            <h3 className="font-bold text-lg text-brand">Affordability Check</h3>
             <p className="text-muted mt-3 text-sm">
               Understand whether your monthly income can comfortably support the loan.
             </p>
           </div>
 
           <div className="bg-white border border-line rounded-xl shadow-sm p-6">
-            <h3 className="font-bold text-lg text-brand">
-              Scam Detection
-            </h3>
+            <h3 className="font-bold text-lg text-brand">Scam Detection</h3>
             <p className="text-muted mt-3 text-sm">
               Identify suspicious loan messages and potential red flags.
             </p>
