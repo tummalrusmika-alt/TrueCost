@@ -37,34 +37,23 @@ function App() {
 
           <button
             onClick={() => setCurrentScreen('loan')}
-            className="mt-8 bg-brand hover:bg-brand-dark text-white font-semibold px-8 py-3 rounded-xl transition-colors"
-            type="button"
+            className="mt-8 bg-brand hover:bg-brand-dark text-white font-semibold px-8 py-3 rounded-xl"
           >
             Get Started
           </button>
         </section>
 
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-16">
-          <div className="bg-white border border-line rounded-xl shadow-sm p-6">
-            <h3 className="font-bold text-lg text-brand">Loan Calculator</h3>
-            <p className="text-muted mt-3 text-sm">
-              Calculate EMI, interest, fees and the actual amount you receive.
-            </p>
-          </div>
-
-          <div className="bg-white border border-line rounded-xl shadow-sm p-6">
-            <h3 className="font-bold text-lg text-brand">Affordability Check</h3>
-            <p className="text-muted mt-3 text-sm">
-              Understand whether your monthly income can comfortably support the loan.
-            </p>
-          </div>
-
-          <div className="bg-white border border-line rounded-xl shadow-sm p-6">
-            <h3 className="font-bold text-lg text-brand">Scam Detection</h3>
-            <p className="text-muted mt-3 text-sm">
-              Identify suspicious loan messages and potential red flags.
-            </p>
-          </div>
+          {[
+            ['Loan Calculator', 'Calculate EMI, interest, fees and the actual amount you receive.'],
+            ['Affordability Check', 'Understand whether your monthly income can comfortably support the loan.'],
+            ['Scam Detection', 'Identify suspicious loan messages and potential red flags.'],
+          ].map(([title, description]) => (
+            <div key={title} className="bg-white border border-line rounded-xl shadow-sm p-6">
+              <h3 className="font-bold text-lg text-brand">{title}</h3>
+              <p className="text-muted mt-3 text-sm">{description}</p>
+            </div>
+          ))}
         </section>
 
         <p className="text-center text-sm text-muted mt-16">
