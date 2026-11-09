@@ -1,121 +1,78 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
+    <div className="min-h-screen bg-page text-ink font-sans">
+      {/* Header */}
+      <header className="bg-white border-b border-line">
+        <div className="max-w-6xl mx-auto px-6 py-5">
+          <h1 className="text-2xl font-bold text-brand">
+            TrueCost
+          </h1>
+          <p className="text-sm text-muted mt-1">
+            Understand your loan before you borrow.
           </p>
         </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+      </header>
 
-      <div className="ticks"></div>
+      {/* Main content */}
+      <main className="max-w-4xl mx-auto px-6 py-16">
+        <section className="text-center">
+          <span className="inline-block bg-brand-tint text-brand rounded-full px-4 py-2 text-sm font-semibold">
+            Smart Loan Analysis
+          </span>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+          <h2 className="text-4xl font-bold mt-6">
+            Know the true cost of your loan.
+          </h2>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+          <p className="text-muted mt-4 text-lg">
+            Calculate your EMI, understand hidden charges,
+            check affordability and identify suspicious loan offers.
+          </p>
+
+          <button
+            className="mt-8 bg-brand hover:bg-brand-dark text-white font-semibold px-8 py-3 rounded-xl transition-colors"
+            type="button"
+          >
+            Get Started
+          </button>
+        </section>
+
+        {/* Feature cards */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-16">
+          <div className="bg-white border border-line rounded-xl shadow-sm p-6">
+            <h3 className="font-bold text-lg text-brand">
+              Loan Calculator
+            </h3>
+            <p className="text-muted mt-3 text-sm">
+              Calculate EMI, interest, fees and the actual amount you receive.
+            </p>
+          </div>
+
+          <div className="bg-white border border-line rounded-xl shadow-sm p-6">
+            <h3 className="font-bold text-lg text-brand">
+              Affordability Check
+            </h3>
+            <p className="text-muted mt-3 text-sm">
+              Understand whether your monthly income can comfortably support the loan.
+            </p>
+          </div>
+
+          <div className="bg-white border border-line rounded-xl shadow-sm p-6">
+            <h3 className="font-bold text-lg text-brand">
+              Scam Detection
+            </h3>
+            <p className="text-muted mt-3 text-sm">
+              Identify suspicious loan messages and potential red flags.
+            </p>
+          </div>
+        </section>
+
+        <p className="text-center text-sm text-muted mt-16">
+          Educational tool, not financial advice.
+        </p>
+      </main>
+    </div>
   )
 }
 
