@@ -83,3 +83,36 @@ Check that the explanation never contradicts the risk level and never claims cer
 - Check that the application works without AI.
 
 **Current result:** Testing has not been completed.
+### Scam input validation
+Status: PASS
+
+- Invalid riskLevel: rejected.
+- redFlags as a string instead of an array: rejected.
+- redFlags containing a number: rejected.
+- All 3 cases returned the expected validation error.
+- No Gemini request should be made for these invalid inputs.
+
+## Validation Tests – 10 November 2026
+
+### extractTerms()
+- Empty input: PASS
+- Spaces-only input: PASS
+- Input over 3000 characters: PASS
+- Null input: PASS
+- Number input: PASS
+
+### explain()
+- Null result: PASS
+- Invalid verdict: PASS
+- Invalid reasons type: PASS
+- Invalid assumptions type: PASS
+
+### explainScam()
+- Invalid risk level: PASS
+- Invalid redFlags type: PASS
+- Invalid redFlags values: PASS
+
+Total: 12 validation tests passed.
+
+Note: These tests validate input handling only.
+Valid AI response tests are pending because the Gemini daily quota was exhausted.

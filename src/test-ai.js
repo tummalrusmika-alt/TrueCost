@@ -1,35 +1,23 @@
 
-import { explainScam } from "./api/ai.js";
-
-const sampleOffer = `
-Congratulations! You are approved for a loan.
-Pay Rs. 5000 upfront to receive your loan.
-`;
-
-const ruleResult = {
-  riskLevel: "high",
-  redFlags: [
-    "Upfront payment requested before loan disbursement",
-    "Lender identity is not verified"
-  ]
-};
+import { extractTerms } from "./api/ai.js";
 
 async function runTests() {
-  const languages = ["en", "te", "hi"];
+  console.log("Testing extractTerms validation...");
 
-  for (const language of languages) {
-    console.log(`\nTesting language: ${language}`);
+  const invalidCases = [
+    "",
+    "   ",
+    "A".repeat(3001),
+    null,
+    123
+  ];
 
-    for (let i = 1; i <= 3; i++) {
-      const result = await explainScam(
-        sampleOffer,
-        ruleResult,
-        language
-      );
-
-      console.log(`Run ${i}:`, result);
-    }
+  for (let i = 0; i < invalidCases.length; i++) {
+    const result = await extractTerms(invalidCases[i]);
+    console.log(`Invalid case ${i + 1}:`, result);
   }
+
+  console.log("extractTerms validation tests completed.");
 }
 
 runTests();
