@@ -1,0 +1,63 @@
+
+[
+  {
+    "id": "S1",
+    "type": "scam",
+    "text": "Sample Bank: Your loan is approved. Pay Rs. 2500 processing fee before receiving the loan."
+  },
+  {
+    "id": "S2",
+    "type": "scam",
+    "text": "Sample Bank: Your account will be blocked. Share your OTP immediately to keep your loan active."
+  },
+  {
+    "id": "S3",
+    "type": "scam",
+    "text": "You received a UPI collect request. Approve it now to receive your personal loan."
+  },
+  {
+    "id": "S4",
+    "type": "scam",
+    "text": "Install this screen-sharing app and show your banking screen to our loan agent to complete verification."
+  },
+  {
+    "id": "S5",
+    "type": "scam",
+    "text": "Your KYC has expired. Pay immediately or your approved loan will be cancelled."
+  },
+  {
+    "id": "S6",
+    "type": "scam",
+    "text": "Congratulations! Your pre-approved loan is ready. Click this short link immediately to claim it."
+  },
+  {
+    "id": "S7",
+    "type": "legitimate",
+    "text": "Sample Bank: Your loan amount has been disbursed to your registered bank account."
+  },
+  {
+    "id": "S8",
+    "type": "legitimate",
+    "text": "Sample Bank: Your monthly EMI payment is due soon. Please check your official bank app."
+  },
+  {
+    "id": "S9",
+    "type": "legitimate",
+    "text": "Sample Bank OTP: Do not share this OTP with anyone. Bank staff will never ask for it."
+  },
+  {
+    "id": "S10",
+    "type": "legitimate",
+    "text": "Sample Bank: We have received your loan payment successfully. Thank you."
+  },
+  {
+    "id": "S11",
+    "type": "legitimate",
+    "text": "Sample Bank: Your latest loan statement is ready. View it using the official bank app."
+  },
+  {
+    "id": "S12",
+    "type": "legitimate",
+    "text": "Sample Bank: Your loan interest rate has changed. Please review the updated details in your official bank account."
+  }
+]
