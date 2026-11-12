@@ -1,9 +1,8 @@
-
 # TrueCost AI Test Log
 
 **Owner:** Person C  
 **AI service:** Firebase AI Logic  
-**Status:** Testing pending because of Gemini daily quota limit.
+**Status:** Input validation tests passed. Real AI response testing is pending because of the Gemini daily quota limit.
 
 ---
 
@@ -28,7 +27,7 @@ Each offer O1–O12 must be tested three times.
 
 ## 2. Explanation tests
 
-Test explain() using Person B's calculation results T1–T7.
+Test `explain()` using Person B's calculation results T1–T7.
 
 | Test ID | Status |
 |---|---|
@@ -44,7 +43,7 @@ Check that every number in the explanation exists in the calculation result.
 
 ## 3. Scam explanation tests
 
-Test explainScam() using all 12 scam messages and Person B's rule results.
+Test `explainScam()` using all 12 scam messages and Person B's rule results.
 
 | Test ID | Status |
 |---|---|
@@ -61,7 +60,7 @@ Test explainScam() using all 12 scam messages and Person B's rule results.
 | S11 | Pending |
 | S12 | Pending |
 
-Check that the explanation never contradicts the risk level and never claims certainty.
+Check that explanations do not contradict the risk level or claim certainty.
 
 ## 4. Failure tests
 
@@ -69,32 +68,17 @@ Check that the explanation never contradicts the risk level and never claims cer
 |---|---|---|
 | Wrong model name | Friendly error response | Pending |
 | Offline connection | Friendly error response | Pending |
-| Empty text | Friendly error response | Pending |
-| 3001 characters | Friendly error response | Pending |
-| Unsupported language | Friendly error response | Pending |
+| Empty text | Friendly error response | PASS for tested functions |
+| 3001 characters | Friendly error response | PASS for tested functions |
+| Unsupported language | Friendly error response | PASS for explainScam |
 | Gemini quota exceeded | Friendly error response | Pending |
 
-## 5. Test notes
+## 5. Input validation test results
 
-- Do not mark a test as passed without actually testing it.
-- Record errors and fixes.
-- Compare all three extraction runs.
-- Check prompt-injection protection using O9.
-- Check that the application works without AI.
-
-**Current result:** Testing has not been completed.
-### Scam input validation
-Status: PASS
-
-- Invalid riskLevel: rejected.
-- redFlags as a string instead of an array: rejected.
-- redFlags containing a number: rejected.
-- All 3 cases returned the expected validation error.
-- No Gemini request should be made for these invalid inputs.
-
-## Validation Tests – 10 November 2026
+**Date: 10–11 November 2026**
 
 ### extractTerms()
+
 - Empty input: PASS
 - Spaces-only input: PASS
 - Input over 3000 characters: PASS
@@ -102,17 +86,119 @@ Status: PASS
 - Number input: PASS
 
 ### explain()
+
 - Null result: PASS
 - Invalid verdict: PASS
 - Invalid reasons type: PASS
 - Invalid assumptions type: PASS
 
-### explainScam()
+### explainScam() – Rule-result validation
+
 - Invalid risk level: PASS
-- Invalid redFlags type: PASS
-- Invalid redFlags values: PASS
+- Missing explanation: PASS
+- Missing nextSteps: PASS
+- nextSteps as a string: PASS
+- Explanation as a number: PASS
 
-Total: 12 validation tests passed.
+### explainScam() – Language validation
 
-Note: These tests validate input handling only.
-Valid AI response tests are pending because the Gemini daily quota was exhausted.
+- Unsupported language code: PASS
+- Language name instead of language code: PASS
+- Empty language: PASS
+- Null language: PASS
+- Number as language: PASS
+
+### explainScam() – Offer input validation
+
+- Empty offer: PASS
+- Spaces-only offer: PASS
+- Input over 3000 characters: PASS
+- Null offer: PASS
+- Number offer: PASS
+
+**Total: 27 input validation tests passed.**
+
+Note: These tests validate input handling only. They do not count as successful Gemini response tests.
+
+## 6. Test notes
+
+- Do not mark a test as passed without actually testing it.
+- Record errors and fixes.
+- Compare all three extraction runs.
+- Check prompt-injection protection using O9.
+- Check that the application works without AI.
+- Do not count validation tests as real AI response tests.
+
+**Current result:** Input validation tests passed. Real AI response tests and remaining failure tests are pending because the Gemini daily quota was exhausted.
+## Person C Progress – 11 November 2026
+
+### Completed
+- Firebase AI initialized.
+- extractTerms() implemented.
+- explain() implemented.
+- explainScam() implemented.
+- Input validation completed.
+- Language validation completed.
+- Error handling implemented.
+- AI examples documented.
+- Test datasets created and formatted.
+- 27 validation tests passed.
+
+### Pending
+- Real AI extraction tests O1–O12.
+- Explanation tests T1–T7.
+- Scam explanation tests S1–S12.
+- Quota and offline failure tests.
+- Integration with Person B's calculation and scam detection functions.
+
+Note: Real AI tests are pending because of Gemini quota limits.
+
+## Updated Validation Run – 11 November 2026
+
+Latest test runner results:
+
+| Function | Passed | Failed |
+|---|---:|---:|
+| extractTerms() | 5 | 0 |
+| explain() | 5 | 0 |
+| explainScam() offer validation | 5 | 0 |
+| explainScam() rule validation | 5 | 0 |
+| **Total** | **20** | **0** |
+
+All 20 tests passed. These tests checked invalid inputs and did not require Gemini API calls.
+
+This is a separate test run and overlaps with previously recorded validation tests. Do not add it to the earlier total.
+## Updated Validation Run – 11 November 2026
+
+- extractTerms invalid input tests: 5 passed
+- explain invalid input tests: 5 passed
+- explainScam invalid offer tests: 5 passed
+- explainScam invalid rule tests: 5 passed
+
+Total: 20 passed, 0 failed.
+
+Note: These tests check input validation only. They do not call Gemini or verify real AI responses.
+
+## Prepared AI Test Files – 11 November 2026
+
+| Test file | Purpose | Status |
+|---|---|---|
+| src/test-extraction.js | Test 12 loan extraction examples (O1–O12) | Prepared – Pending |
+| src/test-explanations.js | Test loan explanations in English, Telugu and Hindi | Prepared – Pending |
+| src/test-scam-explanations.js | Test scam explanations and required disclaimer | Prepared – Pending |
+
+Real Gemini tests have not yet been run because of API quota limitations.
+
+The scam explanation test uses a sample rule result. It does not verify Person B's scam detection accuracy.
+
+## Prepared AI Test Files – 11 November 2026
+
+| Test file | Purpose | Status |
+|---|---|---|
+| src/test-extraction.js | Test 12 loan extraction examples (O1–O12) | Prepared – Pending Gemini quota |
+| src/test-explanations.js | Test loan explanations in English, Telugu and Hindi | Prepared – Pending Gemini quota |
+| src/test-scam-explanations.js | Test S1 scam explanation and required disclaimer | Prepared – Pending Gemini quota |
+
+The scam explanation test uses a sample High-risk result. It does not verify Person B's scam detection accuracy.
+
+Real Gemini tests are pending because of API quota limitations.
