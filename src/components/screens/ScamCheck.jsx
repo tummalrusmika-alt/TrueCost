@@ -1,224 +1,234 @@
 
-import { useState } from "react";
+import { useState } from 'react'
+import Card from '../ui/Card'
+import Button from '../ui/Button'
+import { checkScamRules } from '../../logic/scamRules'
+import { riskStyles } from '../ui/verdictStyles'
 
-import Card from "../ui/Card";
-import Button from "../ui/Button";
-import { riskStyles } from "../ui/verdictStyles";
+function ScamCheck({ onBack }) {
+  const [message, setMessage] = useState('')
+  const [result, setResult] = useState(null)
+  const [error, setError] = useState('')
 
-import { checkScamRules } from "../../logic/scamRules";
-import { explainScam } from "../../api/ai";
+  const handleCheck = (e) => {
+    e.preventDefault()
 
-function ScamCheck({ onBack, language = "en" }) {
-  const [message, setMessage] = useState("");
-  const [result, setResult] = useState(null);
-  const [explanation, setExplanation] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleCheck = async (e) => {
-    e.preventDefault();
-
-    setError("");
-    setResult(null);
-    setExplanation("");
+    setError('')
+    setResult(null)
 
     if (!message.trim()) {
-      setError("Please enter a loan message.");
-      return;
+      setError('Please enter a loan message.')
+      return
     }
 
     if (message.length > 3000) {
-      setError("Maximum 3000 characters allowed.");
-      return;
+      setError('Message cannot exceed 3000 characters.')
+      return
     }
-
-    setLoading(true);
 
     try {
-      const ruleResult = checkScamRules(message);
-
-      if (
-        !ruleResult ||
-        ruleResult.error ||
-        !ruleResult.riskLevel
-      ) {
-        throw new Error(
-          ruleResult?.message || "Unable to check this message."
-        );
-      }
-
-      setResult(ruleResult);
-      setLoading(false);
-
-      // AI explanation is optional.
-      setAiLoading(true);
-
-      try {
-        const aiResult = await explainScam(
-          message,
-          ruleResult,
-          language
-        );
-
-        if (
-          aiResult &&
-          !aiResult.error &&
-          typeof aiResult.explanation === "string"
-        ) {
-          setExplanation(aiResult.explanation);
-        }
-      } catch (aiError) {
-        console.error("AI explanation failed:", aiError);
-      } finally {
-        setAiLoading(false);
-      }
+      const scamResult = checkScamRules(message)
+      setResult(scamResult)
     } catch (err) {
-      setError(err.message || "Something went wrong.");
-      setLoading(false);
+      setError(err.message || 'Unable to check this message.')
     }
-  };
+  }
 
-  const risk = result
+  const styles = result
     ? riskStyles[result.riskLevel]
-    : null;
+    : null
 
   return (
-    <div className="min-h-screen bg-page px-4 py-8 sm:px-6">
-      <div className="max-w-3xl mx-auto">
+    <div className="min-h-screen bg-page text-ink font-sans">
 
-        <button
-          type="button"
-          onClick={onBack}
-          className="mb-6 text-brand font-medium"
-        >
-          ← Back
-        </button>
+      {/* Header */}
+      <header className="bg-white border-b border-line">
+        <div className="max-w-6xl mx-auto px-5 py-5 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-brand">
+              TrueCost
+            </h1>
+            <p className="text-sm text-muted">
+              Protect yourself from suspicious loan offers.
+            </p>
+          </div>
 
-        <h1 className="text-3xl font-bold text-brand">
-          Loan Scam Checker
-        </h1>
+          <button
+            type="button"
+            onClick={onBack}
+            className="text-sm font-semibold text-brand hover:text-brand-dark"
+          >
+            ← Home
+          </button>
+        </div>
+      </header>
 
-        <p className="text-muted mt-2">
-          Check suspicious loan messages for possible warning signs.
-        </p>
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
 
-        <Card className="mt-8">
+        {/* Heading */}
+        <div className="mb-8">
+          <span className="inline-block bg-brand-tint text-brand rounded-full px-4 py-2 text-xs font-bold">
+            SCAM PROTECTION
+          </span>
 
+          <h2 className="text-3xl sm:text-4xl font-bold mt-4">
+            Check a Loan Message
+          </h2>
+
+          <p className="text-muted mt-3">
+            Paste a suspicious loan message below. TrueCost
+            will look for common warning signs.
+          </p>
+        </div>
+
+        {/* Input */}
+        <Card>
           <form onSubmit={handleCheck}>
-
-            <label className="block font-semibold text-ink mb-3">
+            <label className="block font-semibold mb-3">
               Paste your loan message
             </label>
 
             <textarea
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              onChange={(e) => {
+                setMessage(e.target.value)
+                setResult(null)
+                setError('')
+              }}
               maxLength={3000}
               rows={7}
-              placeholder="Paste the loan offer message here..."
-              className="w-full rounded-lg border border-line p-4 bg-white text-ink focus:outline-none focus:ring-2 focus:ring-brand/20"
+              placeholder="Example: Congratulations! Your loan is approved. Pay a processing fee immediately to receive your loan..."
+              className="w-full border border-line rounded-xl p-4 outline-none focus:ring-2 focus:ring-brand resize-y"
             />
 
-            <div className="text-right text-sm text-muted mt-2">
-              {message.length}/3000 characters
+            <div className="flex justify-between text-xs text-muted mt-2">
+              <span>Do not include passwords or OTPs.</span>
+              <span>{message.length}/3000</span>
             </div>
 
             {error && (
-              <p className="text-bad-text text-sm mt-3" role="alert">
+              <p role="alert" className="text-bad-text text-sm mt-3">
                 {error}
               </p>
             )}
 
-            <div className="mt-5">
-              <Button
-                type="submit"
-                block
-                disabled={loading || aiLoading}
-              >
-                {loading ? "Checking..." : "Check Loan Message"}
+            <div className="mt-6">
+              <Button type="submit" block>
+                Check Message →
               </Button>
             </div>
-
           </form>
         </Card>
 
-        {result && risk && (
-          <div className="mt-8 space-y-5">
+        {/* Results */}
+        {result && (
+          <div className="mt-8 space-y-6">
 
+            {/* Risk result */}
             <Card>
-              <h2 className="text-xl font-bold text-ink mb-4">
-                Scam Check Result
-              </h2>
+              <p className="text-sm text-muted font-medium">
+                SCAM RISK ASSESSMENT
+              </p>
 
-              <div className={`border rounded-xl p-5 ${risk.box}`}>
-                <div className="text-3xl font-bold">
-                  {risk.icon} {result.riskLevel} Risk
+              <div className={`mt-4 rounded-xl border p-6 ${styles?.box || ''}`}>
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl font-bold">
+                    {styles?.icon}
+                  </span>
+
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide">
+                      Risk Level
+                    </p>
+
+                    <h3 className="text-3xl font-bold">
+                      {result.riskLevel} Risk
+                    </h3>
+                  </div>
                 </div>
               </div>
+            </Card>
 
-              <h3 className="font-bold mt-6 mb-3">
-                Red Flags
+            {/* Red flags */}
+            <Card>
+              <h3 className="text-xl font-bold text-ink">
+                Detected Warning Signs
               </h3>
 
-              {result.redFlags?.length > 0 ? (
-                <ul className="list-disc pl-5 space-y-2 text-ink">
+              {result.redFlags.length > 0 ? (
+                <ul className="mt-4 space-y-3">
                   {result.redFlags.map((flag, index) => (
-                    <li key={index}>{flag}</li>
+                    <li key={index} className="flex gap-3 text-sm">
+                      <span className="text-bad-text font-bold">!</span>
+                      <span>{flag}</span>
+                    </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-muted">
-                  No red flags were identified by the rules.
-                </p>
-              )}
-
-              <h3 className="font-bold mt-6 mb-3">
-                Recommended Next Steps
-              </h3>
-
-              {result.nextSteps?.length > 0 ? (
-                <ul className="list-disc pl-5 space-y-2 text-ink">
-                  {result.nextSteps.map((step, index) => (
-                    <li key={index}>{step}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-muted">
-                  Verify the offer through your bank's official channels.
+                <p className="text-good-text mt-4">
+                  No warning signs detected by the current rules.
                 </p>
               )}
             </Card>
 
-            {aiLoading && (
+            {/* Explanation */}
+            {result.explanation && (
               <Card>
-                <p className="text-muted">
-                  Generating explanation...
-                </p>
-              </Card>
-            )}
-
-            {explanation && (
-              <Card>
-                <h3 className="font-bold text-lg text-brand mb-3">
-                  AI Explanation
+                <h3 className="text-xl font-bold text-brand">
+                  Explanation
                 </h3>
-                <p className="text-ink whitespace-pre-line">
-                  {explanation}
+                <p className="text-muted mt-3 leading-relaxed">
+                  {result.explanation}
                 </p>
               </Card>
             )}
 
-            <p className="text-sm text-muted text-center">
-              This is a guide, not proof. Always verify with your bank.
-            </p>
+            {/* Next steps */}
+            <Card>
+              <h3 className="text-xl font-bold text-brand">
+                What Should You Do?
+              </h3>
 
+              <ul className="mt-4 space-y-3">
+                {result.nextSteps.map((step, index) => (
+                  <li key={index} className="flex gap-3 text-sm">
+                    <span className="text-brand font-bold">
+                      {index + 1}.
+                    </span>
+                    <span>{step}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+
+            <button
+              onClick={() => {
+                setMessage('')
+                setResult(null)
+                setError('')
+              }}
+              className="w-full border border-line bg-white rounded-xl py-3 font-semibold text-brand hover:bg-brand-tint"
+            >
+              Check Another Message
+            </button>
           </div>
         )}
 
-      </div>
+        {/* Disclaimer */}
+        <div className="bg-okay-bg rounded-xl p-5 mt-8">
+          <p className="text-sm text-okay-text">
+            <strong>Important:</strong> This is a guide, not proof.
+            Always verify with your bank.
+          </p>
+        </div>
+
+        <p className="text-center text-xs text-muted mt-8">
+          Educational tool, not financial advice.
+        </p>
+
+      </main>
     </div>
-  );
+  )
 }
 
-export default ScamCheck;
+export default ScamCheck

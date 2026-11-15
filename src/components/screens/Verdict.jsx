@@ -1,95 +1,100 @@
 
 import Card from '../ui/Card'
 import Button from '../ui/Button'
+import { verdictStyles } from '../ui/verdictStyles'
 
-const verdictStyles = {
-  Good: {
-    box: 'bg-good-bg text-good-text border-good-line',
-    icon: '✓',
-  },
-  Okay: {
-    box: 'bg-okay-bg text-okay-text border-okay-line',
-    icon: '!',
-  },
-  Avoid: {
-    box: 'bg-bad-bg text-bad-text border-bad-line',
-    icon: '✕',
-  },
+function formatRupees(value) {
+  const number = Number(value)
+
+  if (!Number.isFinite(number)) return '—'
+
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(number)
 }
 
-function Verdict({ result, onBack, explanation = '' }) {
+function formatPercent(value) {
+  if (value === null || value === undefined) return null
+
+  const number = Number(value)
+  return Number.isFinite(number) ? `${number.toFixed(2)}%` : '—'
+}
+
+function Verdict({ result, onBack }) {
   if (!result) {
-    return <p className="p-6">No verdict data available.</p>
+    return <div className="min-h-screen bg-page p-8">No verdict available.</div>
   }
 
-  const style = verdictStyles[result.verdict] || verdictStyles.Okay
-
-  const formatRupees = (value) =>
-    new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value)
+  const style = verdictStyles[result.verdict] || verdictStyles.Avoid
 
   return (
-    <div className="min-h-screen bg-page px-4 py-8 sm:px-6 font-sans">
-      <div className="max-w-3xl mx-auto">
+    <div className="min-h-screen bg-page font-sans text-ink">
 
-        <Button variant="secondary" onClick={onBack}>
-          ← Back to Results
-        </Button>
+      <header className="bg-white border-b border-line">
+        <div className="max-w-5xl mx-auto px-5 py-5">
+          <h1 className="text-2xl font-bold text-brand">TrueCost</h1>
+          <p className="text-sm text-muted">Loan affordability analysis</p>
+        </div>
+      </header>
 
-        <h1 className="text-3xl font-bold text-brand mt-8">
-          Loan Verdict
-        </h1>
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-10">
 
-        <p className="text-muted mt-2">
-          Understand what this loan means for your monthly finances.
+        <p className="text-sm font-semibold text-brand uppercase tracking-wider">
+          Final Analysis
+        </p>
+
+        <h2 className="text-3xl sm:text-4xl font-bold mt-2">
+          Your Loan Verdict
+        </h2>
+
+        <p className="text-muted mt-2 mb-8">
+          Here is what your loan calculation tells you.
         </p>
 
         {/* Verdict card */}
-        <Card className={`mt-8 border-2 ${style.box}`}>
-          <p className="text-sm font-semibold uppercase tracking-wide">
-            Loan assessment
+        <div className={`rounded-2xl border-2 p-7 sm:p-10 ${style.box}`}>
+          <p className="text-sm font-semibold uppercase tracking-wider">
+            Our Assessment
           </p>
 
-          <div className="flex items-center gap-4 mt-3">
-            <span className="text-4xl font-bold">
+          <div className="flex items-center gap-4 mt-4">
+            <span className="text-5xl font-bold">
               {style.icon}
             </span>
 
-            <h2 className="text-4xl font-bold">
+            <h3 className="text-4xl sm:text-5xl font-extrabold">
               {result.verdict}
-            </h2>
+            </h3>
           </div>
-        </Card>
 
-        {/* Money left */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-6">
+          <p className="mt-4">
+            Based on your income, expenses and monthly EMI.
+          </p>
+        </div>
+
+        {/* Affordability */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-8">
 
           <Card>
-            <p className="text-sm text-muted">
-              Money left after expenses
-            </p>
-
-            <p className="text-2xl font-bold text-brand mt-3">
+            <p className="text-sm text-muted">Money Left Monthly</p>
+            <h3 className="text-2xl font-bold mt-3">
               {formatRupees(result.moneyLeft)}
-            </p>
+            </h3>
           </Card>
 
           <Card>
-            <p className="text-sm text-muted">
-              EMI share of money left
-            </p>
+            <p className="text-sm text-muted">EMI Share of Money Left</p>
 
-            <p className="text-2xl font-bold text-brand mt-3">
-              {result.emiShareOfLeftPercent == null
-                ? 'N/A'
-                : `${result.emiShareOfLeftPercent.toFixed(2)}%`}
-            </p>
+            <h3 className="text-2xl font-bold mt-3">
+              {result.emiShareOfLeftPercent === null
+                ? 'Not available'
+                : formatPercent(result.emiShareOfLeftPercent)}
+            </h3>
 
-            {result.emiShareOfLeftPercent == null && (
+            {result.emiShareOfLeftPercent === null && (
               <p className="text-sm text-muted mt-2">
                 No money left after expenses.
               </p>
@@ -99,39 +104,43 @@ function Verdict({ result, onBack, explanation = '' }) {
         </div>
 
         {/* Reasons */}
-        <Card className="mt-6">
-          <h2 className="text-xl font-bold text-ink">
-            Reasons for this verdict
-          </h2>
+        <Card className="mt-8">
+          <h3 className="text-xl font-bold text-ink">
+            Why this verdict?
+          </h3>
 
-          <ul className="mt-4 space-y-3">
-            {(result.reasons || []).map((reason, index) => (
-              <li key={index} className="flex gap-3 text-muted">
-                <span className="text-brand font-bold">•</span>
-                <span>{reason}</span>
-              </li>
-            ))}
+          <ul className="mt-5 space-y-4">
+            {(Array.isArray(result.reasons) ? result.reasons : []).map(
+              (reason, index) => (
+                <li key={index} className="flex gap-3 text-sm">
+                  <span className="text-brand font-bold">✓</span>
+                  <span>{reason}</span>
+                </li>
+              )
+            )}
           </ul>
         </Card>
 
-        {/* AI Explanation */}
-        {explanation && (
-          <Card className="mt-6">
-            <h2 className="text-xl font-bold text-brand">
-              Explanation
-            </h2>
+        {/* Disclaimer */}
+        <div className="bg-brand-tint rounded-xl p-5 mt-8">
+          <p className="text-sm text-ink">
+            <strong>Important:</strong> This is an educational guide,
+            not financial advice. Consider your other financial
+            commitments before taking a loan.
+          </p>
+        </div>
 
-            <p className="text-muted mt-3 leading-relaxed">
-              {explanation}
-            </p>
-          </Card>
-        )}
+        <div className="mt-8">
+          <Button onClick={onBack} variant="secondary" block>
+            ← Back to Loan Results
+          </Button>
+        </div>
 
-        <p className="text-center text-sm text-muted mt-8">
+        <p className="text-center text-xs text-muted mt-8">
           Educational tool, not financial advice.
         </p>
 
-      </div>
+      </main>
     </div>
   )
 }

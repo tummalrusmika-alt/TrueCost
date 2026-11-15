@@ -1,6 +1,26 @@
 
 function round2(value) {
+  if (!Number.isFinite(value)) {
+    throw new Error(`Invalid calculation value: ${value}`)
+  }
+
   return Math.round((value + Number.EPSILON) * 100) / 100
+}
+
+function getNumber(object, key, section) {
+  const value = object?.[key]
+
+  if (value === '' || value === null || value === undefined) {
+    throw new Error(`Missing ${section}.${key}`)
+  }
+
+  const number = Number(value)
+
+  if (!Number.isFinite(number)) {
+    throw new Error(`Invalid ${section}.${key}: ${value}`)
+  }
+
+  return number
 }
 
 function calculateEMI(amount, tenureMonths, annualRatePercent) {
@@ -16,10 +36,6 @@ function calculateEMI(amount, tenureMonths, annualRatePercent) {
 }
 
 function calculateMonthlyIRR(emi, tenureMonths, moneyReceived) {
-  if (moneyReceived <= 0) {
-    throw new Error('Money received must be greater than zero.')
-  }
-
   const pv = rate => {
     if (rate === 0) return emi * tenureMonths
 
@@ -34,7 +50,7 @@ function calculateMonthlyIRR(emi, tenureMonths, moneyReceived) {
   }
 
   if (!Number.isFinite(high) || pv(high) > moneyReceived) {
-    throw new Error('Unable to calculate effective interest rate.')
+    throw new Error('Unable to calculate effective rate.')
   }
 
   for (let i = 0; i < 200; i++) {
@@ -51,19 +67,15 @@ function calculateMonthlyIRR(emi, tenureMonths, moneyReceived) {
 }
 
 export function calculateLoan(terms, affordability) {
-  if (!terms || !affordability) {
-    throw new Error('Loan details are missing.')
-  }
+  const amount = getNumber(terms, 'amount', 'terms')
+  const tenureMonths = getNumber(terms, 'tenureMonths', 'terms')
+  const annualRatePercent = getNumber(terms, 'annualRatePercent', 'terms')
+  const processingFee = getNumber(terms, 'processingFee', 'terms')
+  const gstOnFeesPercent = getNumber(terms, 'gstOnFeesPercent', 'terms')
+  const otherCharges = getNumber(terms, 'otherCharges', 'terms')
 
-  const amount = Number(terms.amount)
-  const tenureMonths = Number(terms.tenureMonths)
-  const annualRatePercent = Number(terms.annualRatePercent)
-  const processingFee = Number(terms.processingFee)
-  const gstOnFeesPercent = Number(terms.gstOnFeesPercent)
-  const otherCharges = Number(terms.otherCharges)
-
-  const monthlyIncome = Number(affordability.monthlyIncome)
-  const monthlyExpenses = Number(affordability.monthlyExpenses)
+  const monthlyIncome = getNumber(affordability, 'monthlyIncome', 'affordability')
+  const monthlyExpenses = getNumber(affordability, 'monthlyExpenses', 'affordability')
 
   const values = {
     amount,
@@ -77,8 +89,8 @@ export function calculateLoan(terms, affordability) {
   }
 
   for (const [key, value] of Object.entries(values)) {
-    if (!Number.isFinite(value) || value < 0) {
-      throw new Error(`Invalid or missing value: ${key}`)
+    if (value < 0) {
+      throw new Error(`${key} cannot be negative.`)
     }
   }
 
@@ -90,17 +102,12 @@ export function calculateLoan(terms, affordability) {
     throw new Error('Tenure must be a whole number of months.')
   }
 
-  const emiRaw = calculateEMI(
-    amount,
-    tenureMonths,
-    annualRatePercent
-  )
+  const emiRaw = calculateEMI(amount, tenureMonths, annualRatePercent)
 
   const totalInterestRaw = emiRaw * tenureMonths - amount
   const feesRaw = processingFee + otherCharges
   const gstAmountRaw = processingFee * gstOnFeesPercent / 100
   const hiddenExtraRaw = feesRaw + gstAmountRaw
-
   const moneyReceivedRaw = amount - hiddenExtraRaw
 
   if (moneyReceivedRaw <= 0) {
