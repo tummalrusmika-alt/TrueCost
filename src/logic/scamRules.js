@@ -1,11 +1,11 @@
 
 export function checkScamRules(text) {
-  const message = text.toLowerCase()
+  const message = String(text || '').toLowerCase()
   const redFlags = []
 
   // 1. Advance payment requests
   if (
-    /processing fee|advance fee|pay first|upfront fee|payment required|registration fee/.test(message)
+    /processing fee|advance fee|pay first|upfront fee|payment required|registration fee|transfer.*before|pay.*before|before.*release|before.*disbursement|send.*money/.test(message)
   ) {
     redFlags.push(
       'Requests an upfront payment before providing the loan.'
@@ -14,7 +14,7 @@ export function checkScamRules(text) {
 
   // 2. Urgency and pressure
   if (
-    /immediately|urgent|10 minutes|limited time|act now|within minutes|hurry/.test(message)
+    /immediately|urgent|10 minutes|limited time|act now|within minutes|hurry|within \d+ minutes/.test(message)
   ) {
     redFlags.push(
       'Creates urgency or pressures you to act quickly.'
@@ -23,7 +23,7 @@ export function checkScamRules(text) {
 
   // 3. Suspicious links
   if (
-    /click here|click the link|unknown link|open this link/.test(message)
+    /click here|click the link|unknown link|open this link|click this link/.test(message)
   ) {
     redFlags.push(
       'Asks you to open a potentially suspicious link.'
@@ -48,7 +48,25 @@ export function checkScamRules(text) {
     )
   }
 
-  // Calculate risk using number of detected flags
+  // 6. Personal payment accounts
+  if (
+    /personal upi|personal account|personal upi account|individual upi/.test(message)
+  ) {
+    redFlags.push(
+      'Requests payment to a personal account instead of a verified lender.'
+    )
+  }
+
+  // 7. Discourages bank verification
+  if (
+    /do not contact the bank|don't contact the bank|never contact the bank|do not verify|don't verify|avoid contacting the bank/.test(message)
+  ) {
+    redFlags.push(
+      'Discourages you from independently verifying the loan with your bank.'
+    )
+  }
+
+  // 8. Risk classification
   let riskLevel = 'Low'
 
   if (redFlags.length >= 2) {

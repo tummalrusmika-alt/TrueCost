@@ -3,7 +3,6 @@ function round2(value) {
   return Math.round((value + Number.EPSILON) * 100) / 100
 }
 
-// Standard reducing-balance EMI calculation
 function calculateEMI(amount, tenureMonths, annualRatePercent) {
   const monthlyRate = annualRatePercent / 1200
 
@@ -13,50 +12,35 @@ function calculateEMI(amount, tenureMonths, annualRatePercent) {
 
   const factor = Math.pow(1 + monthlyRate, tenureMonths)
 
-  return (amount * monthlyRate * factor) / (factor - 1)
+  return amount * monthlyRate * factor / (factor - 1)
 }
 
-// Find monthly IRR using binary search.
-// PV of all EMIs must equal the upfront amount received.
 function calculateMonthlyIRR(emi, tenureMonths, moneyReceived) {
   if (moneyReceived <= 0) {
-    throw new Error(
-      'Money received must be greater than zero to calculate the effective rate.'
-    )
+    throw new Error('Money received must be greater than zero.')
+  }
+
+  const pv = rate => {
+    if (rate === 0) return emi * tenureMonths
+
+    return emi * (1 - Math.pow(1 + rate, -tenureMonths)) / rate
   }
 
   let low = 0
   let high = 1
 
-  const presentValue = (rate) => {
-    if (rate === 0) {
-      return emi * tenureMonths
-    }
-
-    return (
-      emi *
-      (1 - Math.pow(1 + rate, -tenureMonths)) /
-      rate
-    )
-  }
-
-  // Find an upper bound for the monthly rate.
-  let attempts = 0
-
-  while (presentValue(high) > moneyReceived && attempts < 100) {
+  while (pv(high) > moneyReceived && high < 1e10) {
     high *= 2
-    attempts++
   }
 
-  if (presentValue(high) > moneyReceived) {
-    throw new Error('Unable to calculate the effective interest rate.')
+  if (!Number.isFinite(high) || pv(high) > moneyReceived) {
+    throw new Error('Unable to calculate effective interest rate.')
   }
 
-  // Binary search for the monthly IRR.
   for (let i = 0; i < 200; i++) {
     const mid = (low + high) / 2
 
-    if (presentValue(mid) > moneyReceived) {
+    if (pv(mid) > moneyReceived) {
       low = mid
     } else {
       high = mid
@@ -68,22 +52,18 @@ function calculateMonthlyIRR(emi, tenureMonths, moneyReceived) {
 
 export function calculateLoan(terms, affordability) {
   if (!terms || !affordability) {
-    throw new Error('Loan terms and affordability inputs are required.')
+    throw new Error('Loan details are missing.')
   }
 
-  const {
-    amount,
-    tenureMonths,
-    annualRatePercent,
-    processingFee,
-    gstOnFeesPercent,
-    otherCharges,
-  } = terms
+  const amount = Number(terms.amount)
+  const tenureMonths = Number(terms.tenureMonths)
+  const annualRatePercent = Number(terms.annualRatePercent)
+  const processingFee = Number(terms.processingFee)
+  const gstOnFeesPercent = Number(terms.gstOnFeesPercent)
+  const otherCharges = Number(terms.otherCharges)
 
-  const {
-    monthlyIncome,
-    monthlyExpenses,
-  } = affordability
+  const monthlyIncome = Number(affordability.monthlyIncome)
+  const monthlyExpenses = Number(affordability.monthlyExpenses)
 
   const values = {
     amount,
@@ -93,143 +73,97 @@ export function calculateLoan(terms, affordability) {
     gstOnFeesPercent,
     otherCharges,
     monthlyIncome,
-    monthlyExpenses,
+    monthlyExpenses
   }
 
   for (const [key, value] of Object.entries(values)) {
-    if (
-      typeof value !== 'number' ||
-      !Number.isFinite(value) ||
-      value < 0
-    ) {
-      throw new Error(`Invalid value for ${key}.`)
+    if (!Number.isFinite(value) || value < 0) {
+      throw new Error(`Invalid or missing value: ${key}`)
     }
   }
 
   if (amount <= 0 || tenureMonths <= 0 || monthlyIncome <= 0) {
-    throw new Error(
-      'Loan amount, tenure and monthly income must be above zero.'
-    )
+    throw new Error('Amount, tenure and income must be above zero.')
   }
 
   if (!Number.isInteger(tenureMonths)) {
-    throw new Error('Loan tenure must be a whole number of months.')
+    throw new Error('Tenure must be a whole number of months.')
   }
 
-  // 1. EMI
   const emiRaw = calculateEMI(
     amount,
     tenureMonths,
     annualRatePercent
   )
 
-  // 2. Interest
   const totalInterestRaw = emiRaw * tenureMonths - amount
-
-  // 3. Fees and GST
   const feesRaw = processingFee + otherCharges
-
-  const gstAmountRaw =
-    (processingFee * gstOnFeesPercent) / 100
-
-  // 4. Extra costs
+  const gstAmountRaw = processingFee * gstOnFeesPercent / 100
   const hiddenExtraRaw = feesRaw + gstAmountRaw
 
-  // 5. Total paid and amount received
-  const moneyReceivedRaw =
-    amount - feesRaw - gstAmountRaw
+  const moneyReceivedRaw = amount - hiddenExtraRaw
 
   if (moneyReceivedRaw <= 0) {
-    throw new Error(
-      'Upfront fees and GST must be less than the loan amount.'
-    )
+    throw new Error('Fees and GST must be less than the loan amount.')
   }
 
-  // Ensure the returned totalPaid invariant holds after rounding.
-  const emi = round2(emiRaw)
-  const totalInterest = round2(totalInterestRaw)
-  const fees = round2(feesRaw)
-  const gstAmount = round2(gstAmountRaw)
-  const hiddenExtra = round2(hiddenExtraRaw)
-
-  const totalPaid = round2(
-    amount + totalInterest + hiddenExtra
-  )
-
-  const moneyReceived = round2(moneyReceivedRaw)
-
-  // 6. Effective annual rate using monthly IRR × 12
   const monthlyIRR = calculateMonthlyIRR(
     emiRaw,
     tenureMonths,
     moneyReceivedRaw
   )
 
-  const effectiveRatePercent = round2(monthlyIRR * 12 * 100)
-
-  // 7. Affordability
   const moneyLeftRaw = monthlyIncome - monthlyExpenses
 
-  const emiShareRaw =
-    moneyLeftRaw > 0
-      ? (emiRaw / moneyLeftRaw) * 100
-      : null
+  const emiShareRaw = moneyLeftRaw > 0
+    ? emiRaw / moneyLeftRaw * 100
+    : null
+
+  const emi = round2(emiRaw)
+  const totalInterest = round2(totalInterestRaw)
+  const fees = round2(feesRaw)
+  const gstAmount = round2(gstAmountRaw)
+  const hiddenExtra = round2(hiddenExtraRaw)
+  const moneyReceived = round2(moneyReceivedRaw)
+
+  const totalPaid = round2(
+    amount + totalInterest + hiddenExtra
+  )
 
   const moneyLeft = round2(moneyLeftRaw)
 
-  const emiShareOfLeftPercent =
-    emiShareRaw === null
-      ? null
-      : round2(emiShareRaw)
+  const emiShareOfLeftPercent = emiShareRaw === null
+    ? null
+    : round2(emiShareRaw)
 
-  // 8. Verdict thresholds from the proposed data shapes.
   let verdict
   const reasons = []
 
-  if (
-    moneyLeftRaw <= 0 ||
-    emiShareRaw > 50
-  ) {
+  if (moneyLeftRaw <= 0 || emiShareRaw > 50) {
     verdict = 'Avoid'
-
-    if (moneyLeftRaw <= 0) {
-      reasons.push(
-        'No money is left after monthly expenses.'
-      )
-    } else {
-      reasons.push(
-        `The EMI takes ${round2(emiShareRaw)}% of the money left each month.`
-      )
-    }
+    reasons.push(
+      moneyLeftRaw <= 0
+        ? 'No money is left after monthly expenses.'
+        : `The EMI takes ${round2(emiShareRaw)}% of the money left each month.`
+    )
   } else if (emiShareRaw > 30) {
     verdict = 'Okay'
-
     reasons.push(
       `The EMI takes ${round2(emiShareRaw)}% of the money left each month.`
     )
   } else {
     verdict = 'Good'
-
     reasons.push(
       `The EMI takes ${round2(emiShareRaw)}% of the money left each month.`
     )
   }
 
-  if (hiddenExtraRaw > 0) {
+  if (hiddenExtra > 0) {
     reasons.push(
       `Fees and GST add ₹${hiddenExtra.toFixed(2)} on top of the interest.`
     )
   }
 
-  // 9. Assumptions
-  const assumptions = [
-    'EMI uses the reducing-balance formula at the advertised rate.',
-    'Processing fee, GST on the fee and other charges are deducted upfront.',
-    'GST is applied to the processing fee only, not to interest.',
-    'Effective rate = monthly IRR × 12.',
-  ]
-
-  // 10. Return agreed calculation result shape.
   return {
     emi,
     totalInterest,
@@ -238,12 +172,17 @@ export function calculateLoan(terms, affordability) {
     hiddenExtra,
     totalPaid,
     moneyReceived,
-    effectiveRatePercent,
+    effectiveRatePercent: round2(monthlyIRR * 12 * 100),
     annualizationMethod: 'monthly IRR × 12',
-    assumptions,
+    assumptions: [
+      'EMI uses the reducing-balance formula at the advertised rate.',
+      'Processing fee, GST on the fee and other charges are deducted upfront.',
+      'GST is applied to the processing fee only, not to interest.',
+      'Effective rate = monthly IRR × 12.'
+    ],
     moneyLeft,
     emiShareOfLeftPercent,
     verdict,
-    reasons,
+    reasons
   }
 }
