@@ -1,4 +1,3 @@
-
 # TrueCost AI Examples
 
 This file explains how the three AI functions work.
@@ -9,7 +8,7 @@ AI only extracts loan details and explains results. It does not calculate EMIs o
 
 ## 1. extractTerms()
 
-Purpose: Extract loan details from pasted text.
+**Purpose:** Extract loan details from pasted text.
 
 ### Example input
 
@@ -28,11 +27,13 @@ Sample Bank offers a loan of Rs. 50,000 for 12 months at 14% annual interest. Pr
 }
 ```
 
+The AI must extract only information supported by the offer text. It must not invent missing values.
+
 ---
 
 ## 2. explain()
 
-Purpose: Explain the calculation result provided by Person B.
+**Purpose:** Explain the calculation result provided by Person B.
 
 ### Example input
 
@@ -59,7 +60,7 @@ Purpose: Explain the calculation result provided by Person B.
 }
 ```
 
-### Expected output
+### Example output
 
 ```json
 {
@@ -67,11 +68,19 @@ Purpose: Explain the calculation result provided by Person B.
 }
 ```
 
+The wording is illustrative. Actual AI responses may use different wording.
+
+**Important rules:**
+- Explain the result provided by Person B.
+- Do not calculate or change any numbers.
+- Do not change the verdict.
+- Do not invent financial information.
+
 ---
 
 ## 3. explainScam()
 
-Purpose: Explain the scam risk result provided by Person B.
+**Purpose:** Explain the scam risk result provided by Person B.
 
 ### Example input
 
@@ -90,7 +99,7 @@ Purpose: Explain the scam risk result provided by Person B.
 }
 ```
 
-### Expected output
+### Example output
 
 ```json
 {
@@ -98,16 +107,26 @@ Purpose: Explain the scam risk result provided by Person B.
 }
 ```
 
+The wording is illustrative. Actual AI responses may use different wording.
+
+**Important rules:**
+- Explain the risk result provided by Person B.
+- Do not change the risk level.
+- Do not claim that a message is definitely a scam.
+- Always include this exact final disclaimer:
+
+"This is a guide, not proof. Always verify with your bank."
+
 ---
 
 ## 4. Common error response
 
-All three functions must return this type of error when something goes wrong.
+All three functions must return a consistent error object when something goes wrong.
 
 ```json
 {
   "error": true,
-  "message": "The AI helper is not available right now. You can fill in the form by hand."
+  "message": "AI could not process this request. Please try again or fill in the form manually."
 }
 ```
 
@@ -119,14 +138,21 @@ Possible reasons:
 - Text exceeds 3000 characters.
 - Unsupported language.
 
+The actual error message may vary depending on the error type.
+
 The app must continue working without AI.
 
 ---
 
-## Important rule
+## 5. Important responsibility rules
 
-AI extracts and explains information.
+| Task | Responsible part |
+|---|---|
+| Extract loan details | Person C – AI |
+| Calculate EMI and loan costs | Person B – Code |
+| Decide loan verdict | Person B – Code |
+| Detect scam risk | Person B – Code |
+| Explain loan results | Person C – AI |
+| Explain scam risk | Person C – AI |
 
-Person B's code calculates loan results and detects scam risk.
-
-AI must never calculate or change numbers.
+**Final rule:** AI extracts and explains information. It must never calculate, change, or invent numbers. Person B's code remains responsible for calculations and scam detection.
