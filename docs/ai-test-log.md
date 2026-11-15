@@ -202,3 +202,118 @@ The scam explanation test uses a sample rule result. It does not verify Person B
 The scam explanation test uses a sample High-risk result. It does not verify Person B's scam detection accuracy.
 
 Real Gemini tests are pending because of API quota limitations.
+
+## Calculation and AI Explanation Integration – 12 November 2026
+
+- English explanation: PASS
+- Telugu explanation: PASS
+- Hindi explanation: PASS
+- Person B calculateLoan() successfully connected to Person C explain().
+- All three languages returned non-empty AI explanations.
+
+## Scam Detection and AI Explanation Integration – 12 November 2026
+
+- English: PASS
+- Telugu: PASS
+- Hindi: PASS
+- Person B checkScamRules() successfully connected to Person C explainScam().
+- High-risk result correctly passed to AI.
+- Required safety disclaimer included in all three responses.
+
+# TrueCost - AI Testing Log
+
+Date: 12 November 2026
+
+## Scam Integration Tests
+
+| Test | Result |
+|---|---|
+| High-risk scam detection | PASS |
+| Low-risk scam detection | PASS |
+| Medium-risk scam detection | PASS |
+| English explanation | PASS |
+| Telugu explanation | PASS |
+| Hindi explanation | PASS |
+| Prompt-injection test | PASS |
+| Required scam disclaimer | PASS |
+
+## Integration
+
+Person B scam rules are successfully connected to Person C AI explanations.
+
+The AI explains the risk result without changing the risk level.
+
+## Note
+
+These tests confirm the tested cases only. More security and accuracy testing is required.
+
+## Person C Validation Tests
+
+| Test | Result |
+|---|---|
+| Invalid extractTerms inputs | PASS (5/5) |
+| Invalid explain inputs | PASS (5/5) |
+| Invalid explainScam offer inputs | PASS (5/5) |
+| Invalid explainScam rule inputs | PASS (5/5) |
+
+Total: 20 passed, 0 failed.
+
+Note: Successful AI extraction tests are pending
+because the Gemini free-tier daily quota was exceeded.
+## Additional Person C Validation Tests
+
+**Date:** 14 November 2026
+
+| Test | Result |
+|---|---|
+| Unsupported explanation languages | PASS (6/6) |
+| Invalid explanation structures | PASS (4/4) |
+| Invalid scam languages | PASS (5/5) |
+| Invalid scam rule structures | PASS (4/4) |
+
+**Total: 19 passed, 0 failed.**
+
+### Note
+
+These validation tests did not require successful Gemini API responses. Real AI extraction and explanation tests are still subject to Gemini API quota availability.
+## AI Scam Explanation Tests
+
+**Date:** 14 November 2026
+
+| Language | Result |
+|---|---|
+| English | PASS |
+| Telugu | PASS |
+| Hindi | PENDING - API quota exceeded |
+
+English and Telugu explanations included the required disclaimer:
+
+"This is a guide, not proof. Always verify with your bank."
+
+Hindi testing is pending because the Gemini free-tier daily quota was exceeded.
+
+The AI fallback message was returned correctly.
+## Additional AI Validation Tests
+
+**Date:** 15 November 2026
+
+| Test | Result |
+|---|---|
+| Unsupported explanation languages | PASS |
+| Invalid explanation structures | PASS |
+| Invalid scam languages | PASS |
+| Invalid scam rule structures | PASS |
+| Invalid extraction inputs | PASS |
+
+**Total: 24 passed, 0 failed.**
+## Production Build Test – 15 November 2026
+
+| Test | Result |
+|---|---|
+| Vite production build | PASS |
+| JavaScript compilation | PASS |
+| CSS compilation | PASS |
+
+Build completed successfully using `npm run build`.
+
+No build errors.

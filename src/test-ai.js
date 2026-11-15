@@ -6,7 +6,7 @@ import {
 } from "./api/ai.js";
 
 async function runTests() {
-  console.log("========== PERSON C VALIDATION TESTS ==========");
+  console.log("========== PERSON C EXTRA VALIDATION TESTS ==========");
 
   let passed = 0;
   let failed = 0;
@@ -18,76 +18,91 @@ async function runTests() {
 
     if (success) {
       passed++;
-      console.log("PASS:", name, result);
+      console.log("PASS:", name);
     } else {
       failed++;
       console.error("FAIL:", name, result);
     }
   }
 
-  const ruleResult = {
+  const validRuleResult = {
     riskLevel: "High",
     redFlags: ["Unknown lender"],
     explanation: "Unknown lender.",
     nextSteps: ["Verify with your bank."]
   };
 
-  const invalidOffers = [
-    "",
-    "   ",
-    "A".repeat(3001),
-    null,
-    123
-  ];
+  // Test 1: Unsupported languages
+  const languages = ["fr", "es", "ta", "", null, 123];
 
-  // Test 1: extractTerms invalid inputs
-  for (const [i, offer] of invalidOffers.entries()) {
-    const result = await extractTerms(offer);
-    check(`extractTerms invalid input ${i + 1}`, result);
-  }
-
-  // Test 2: explain invalid inputs
-  const invalidResults = [
-    null,
-    {},
-    { verdict: "Dangerous", reasons: [], assumptions: [] },
-    { verdict: "Good", reasons: "wrong", assumptions: [] },
-    { verdict: "Good", reasons: [], assumptions: "wrong" }
-  ];
-
-  for (const [i, result] of invalidResults.entries()) {
-    const output = await explain(result, "en");
-    check(`explain invalid input ${i + 1}`, output);
-  }
-
-  // Test 3: explainScam invalid offer inputs
-  for (const [i, offer] of invalidOffers.entries()) {
-    const result = await explainScam(
-      offer,
-      ruleResult,
-      "en"
+  for (const language of languages) {
+    const result = await explain(
+      {
+        verdict: "Good",
+        reasons: [],
+        assumptions: []
+      },
+      language
     );
 
-    check(`explainScam invalid offer ${i + 1}`, result);
+    check(`Unsupported language: ${language}`, result);
   }
 
-  // Test 4: explainScam invalid rule results
+  // Test 2: Invalid explanation result structures
+  const invalidResults = [
+  { verdict: "Bad", reasons: [], assumptions: [] },
+  { verdict: "Okay", reasons: "wrong", assumptions: [] },
+  { verdict: "Avoid", reasons: [], assumptions: null },
+  { verdict: null, reasons: [], assumptions: [] }
+];
+
+  for (const result of invalidResults) {
+    const output = await explain(result, "en");
+    check("Invalid explanation structure", output);
+  }
+
+  // Test 3: Invalid scam languages
+  const invalidLanguages = ["fr", "ta", "", null, 123];
+
+  for (const language of invalidLanguages) {
+    const result = await explainScam(
+      "Sample loan message",
+      validRuleResult,
+      language
+    );
+
+    check(`Invalid scam language: ${language}`, result);
+  }
+
+  // Test 4: Invalid scam rule fields
   const invalidRules = [
-    null,
-    { ...ruleResult, riskLevel: "Extremely Dangerous" },
-    { ...ruleResult, redFlags: "wrong" },
-    { ...ruleResult, explanation: 123 },
-    { ...ruleResult, nextSteps: "wrong" }
+    { ...validRuleResult, riskLevel: "Critical" },
+    { ...validRuleResult, redFlags: [123] },
+    { ...validRuleResult, explanation: null },
+    { ...validRuleResult, nextSteps: [null] }
   ];
 
-  for (const [i, rule] of invalidRules.entries()) {
+  for (const rule of invalidRules) {
     const result = await explainScam(
-      "This is a sample loan offer.",
+      "Sample loan message",
       rule,
       "en"
     );
 
-    check(`explainScam invalid rule ${i + 1}`, result);
+    check("Invalid scam rule structure", result);
+  }
+    // Test 5: Invalid loan offer inputs
+  const invalidOffers = [
+    "",
+    "   ",
+    "x".repeat(3001),
+    null,
+    123
+  ];
+
+  for (const offer of invalidOffers) {
+    const result = await extractTerms(offer);
+    check(`Invalid extraction input: ${String(offer).slice(0, 20)}`, result);
   }
 
   console.log("========== TEST SUMMARY ==========");

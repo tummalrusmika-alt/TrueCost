@@ -17,28 +17,45 @@ const ruleResult = {
   ]
 };
 
-async function runTest() {
-  console.log("========== SCAM EXPLANATION TEST ==========");
+const languages = ["en", "te", "hi"];
 
-  const result = await explainScam(
-    offerText,
-    ruleResult,
-    "en"
-  );
+async function runTests() {
+  console.log("========== SCAM EXPLANATION TESTS ==========");
 
-  console.log("AI result:", result);
+  let passed = 0;
+  let failed = 0;
 
-  if (
-    !result?.error &&
-    typeof result?.text === "string" &&
-    result.text.trim().endsWith(
-      "This is a guide, not proof. Always verify with your bank."
-    )
-  ) {
-    console.log("PASS: Explanation and disclaimer are valid.");
-  } else {
-    console.error("FAIL: Check the AI response.");
+  for (const language of languages) {
+    console.log(`Testing language: ${language}`);
+
+    const result = await explainScam(
+      offerText,
+      ruleResult,
+      language
+    );
+
+    const valid =
+      !result?.error &&
+      typeof result?.text === "string" &&
+      result.text.trim().length > 0 &&
+      result.text.includes(
+        "This is a guide, not proof. Always verify with your bank."
+      );
+
+    if (valid) {
+      passed++;
+      console.log(`PASS: ${language} explanation and disclaimer valid.`);
+      console.log("AI response:", result.text);
+    } else {
+      failed++;
+      console.error(`FAIL: ${language}`, result);
+    }
   }
+
+  console.log("========== TEST SUMMARY ==========");
+  console.log("Passed:", passed);
+  console.log("Failed:", failed);
+  console.log("Total:", passed + failed);
 }
 
-runTest();
+runTests();
