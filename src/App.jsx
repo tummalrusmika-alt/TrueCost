@@ -6,10 +6,23 @@ import Results from './components/screens/Results'
 import Verdict from './components/screens/Verdict'
 import ScamCheck from './components/screens/ScamCheck'
 
-import { sampleCalculationResult } from './data/sampleData'
-
 function App() {
   const [currentScreen, setCurrentScreen] = useState('home')
+  const [calculationResult, setCalculationResult] = useState(null)
+
+  // Receive the latest calculated result from LoanInput
+  const handleCalculationSuccess = (result) => {
+    if (!result || result.error) {
+      console.error(
+        'Calculation failed:',
+        result?.message || 'Invalid calculation result'
+      )
+      return
+    }
+
+    setCalculationResult(result)
+    setCurrentScreen('results')
+  }
 
   // HOME SCREEN
   if (currentScreen === 'home') {
@@ -21,6 +34,7 @@ function App() {
             <h1 className="text-2xl font-bold text-brand">
               TrueCost
             </h1>
+
             <p className="text-sm text-muted mt-1">
               Understand your loan before you borrow.
             </p>
@@ -45,7 +59,10 @@ function App() {
             </p>
 
             <button
-              onClick={() => setCurrentScreen('loan')}
+              onClick={() => {
+                setCalculationResult(null)
+                setCurrentScreen('loan')
+              }}
               className="mt-8 bg-brand hover:bg-brand-dark text-white font-semibold px-8 py-3 rounded-xl"
             >
               Get Started
@@ -59,6 +76,7 @@ function App() {
               <h3 className="font-bold text-lg text-brand">
                 Loan Calculator
               </h3>
+
               <p className="text-muted mt-3 text-sm">
                 Calculate EMI, interest, fees and the actual amount you receive.
               </p>
@@ -68,6 +86,7 @@ function App() {
               <h3 className="font-bold text-lg text-brand">
                 Affordability Check
               </h3>
+
               <p className="text-muted mt-3 text-sm">
                 Understand whether your monthly income can comfortably support the loan.
               </p>
@@ -77,6 +96,7 @@ function App() {
               <h3 className="font-bold text-lg text-brand">
                 Scam Detection
               </h3>
+
               <p className="text-muted mt-3 text-sm">
                 Identify suspicious loan messages and potential red flags.
               </p>
@@ -85,6 +105,7 @@ function App() {
           </section>
 
           <section className="text-center mt-12">
+
             <h2 className="text-2xl font-bold text-brand">
               Worried about a loan offer?
             </h2>
@@ -99,6 +120,7 @@ function App() {
             >
               Check Loan Message →
             </button>
+
           </section>
 
           <p className="text-center text-sm text-muted mt-16">
@@ -110,10 +132,11 @@ function App() {
     )
   }
 
-  // LOAN INPUT
+  // LOAN INPUT SCREEN
   if (currentScreen === 'loan') {
     return (
       <div className="min-h-screen bg-page">
+
         <button
           onClick={() => setCurrentScreen('home')}
           className="m-4 px-4 py-2 rounded-lg border border-line bg-white text-brand"
@@ -122,34 +145,59 @@ function App() {
         </button>
 
         <LoanInput
-          onSubmitSuccess={() => setCurrentScreen('results')}
+          onSubmitSuccess={handleCalculationSuccess}
         />
+
       </div>
     )
   }
 
-  // RESULTS
+  // RESULTS SCREEN
   if (currentScreen === 'results') {
+
+    if (!calculationResult) {
+      return (
+        <div className="min-h-screen bg-page p-8">
+          <p className="text-ink">
+            No calculation result available.
+          </p>
+
+          <button
+            onClick={() => setCurrentScreen('loan')}
+            className="mt-4 bg-brand text-white px-5 py-2 rounded-lg"
+          >
+            Back to Loan Input
+          </button>
+        </div>
+      )
+    }
+
     return (
       <Results
-        result={sampleCalculationResult}
+        result={calculationResult}
         onBack={() => setCurrentScreen('loan')}
         onShowVerdict={() => setCurrentScreen('verdict')}
       />
     )
   }
 
-  // VERDICT
+  // VERDICT SCREEN
   if (currentScreen === 'verdict') {
+
+    if (!calculationResult) {
+      setCurrentScreen('loan')
+      return null
+    }
+
     return (
       <Verdict
-        result={sampleCalculationResult}
+        result={calculationResult}
         onBack={() => setCurrentScreen('results')}
       />
     )
   }
 
-  // SCAM DETECTION
+  // SCAM DETECTION SCREEN
   if (currentScreen === 'scam') {
     return (
       <ScamCheck
