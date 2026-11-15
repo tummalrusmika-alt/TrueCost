@@ -4,7 +4,7 @@ import Card from '../ui/Card'
 import Button from '../ui/Button'
 import Field from '../ui/Field'
 
-function LoanInput() {
+function LoanInput({ onSubmitSuccess }) {
   const [form, setForm] = useState({
     amount: '50000',
     tenureMonths: '12',
@@ -17,9 +17,7 @@ function LoanInput() {
   })
 
   const [errors, setErrors] = useState({})
-  const [success, setSuccess] = useState(false)
 
-  // Handle input changes
   const handleChange = (name, value) => {
     setForm((prev) => ({
       ...prev,
@@ -30,15 +28,11 @@ function LoanInput() {
       ...prev,
       [name]: '',
     }))
-
-    setSuccess(false)
   }
 
-  // Validate all loan details
   const validate = () => {
     const newErrors = {}
 
-    // Check empty and negative values
     Object.entries(form).forEach(([key, value]) => {
       if (value.trim() === '') {
         newErrors[key] = 'This field is required'
@@ -50,15 +44,10 @@ function LoanInput() {
       }
     })
 
-    // Loan amount must be greater than zero
-    if (
-      form.amount !== '' &&
-      Number(form.amount) <= 0
-    ) {
+    if (form.amount !== '' && Number(form.amount) <= 0) {
       newErrors.amount = 'Loan amount must be above 0'
     }
 
-    // Tenure must be greater than zero
     if (
       form.tenureMonths !== '' &&
       Number(form.tenureMonths) <= 0
@@ -66,7 +55,6 @@ function LoanInput() {
       newErrors.tenureMonths = 'Tenure must be above 0'
     }
 
-    // Monthly income must be greater than zero
     if (
       form.monthlyIncome !== '' &&
       Number(form.monthlyIncome) <= 0
@@ -75,7 +63,6 @@ function LoanInput() {
         'Monthly income must be above 0'
     }
 
-    // Monthly expenses cannot exceed monthly income
     if (
       form.monthlyIncome !== '' &&
       form.monthlyExpenses !== '' &&
@@ -92,60 +79,51 @@ function LoanInput() {
     return Object.keys(newErrors).length === 0
   }
 
-  // Handle form submission
   const handleSubmit = (e) => {
     e.preventDefault()
 
-    setSuccess(false)
-
     if (validate()) {
-      setSuccess(true)
+      console.log('Loan details validated:', form)
 
-      console.log('Validated loan details:', form)
+      // Open Results screen
+      if (typeof onSubmitSuccess === 'function') {
+        onSubmitSuccess()
+      }
     }
   }
 
-  // Form fields
   const fields = [
     {
       name: 'amount',
       label: 'Loan Amount (₹)',
-      placeholder: 'Example: 50000',
     },
     {
       name: 'tenureMonths',
       label: 'Loan Tenure (Months)',
-      placeholder: 'Example: 12',
     },
     {
       name: 'annualRatePercent',
       label: 'Annual Interest Rate (%)',
-      placeholder: 'Example: 12',
     },
     {
       name: 'processingFee',
       label: 'Processing Fee (₹)',
-      placeholder: 'Example: 1000',
     },
     {
       name: 'gstOnFeesPercent',
       label: 'GST on Fees (%)',
-      placeholder: 'Example: 18',
     },
     {
       name: 'otherCharges',
       label: 'Other Charges (₹)',
-      placeholder: 'Example: 0',
     },
     {
       name: 'monthlyIncome',
       label: 'Monthly Income (₹)',
-      placeholder: 'Enter monthly income',
     },
     {
       name: 'monthlyExpenses',
       label: 'Monthly Expenses (₹)',
-      placeholder: 'Enter monthly expenses',
     },
   ]
 
@@ -154,7 +132,6 @@ function LoanInput() {
 
       <div className="max-w-3xl mx-auto">
 
-        {/* Heading */}
         <h1 className="text-3xl font-bold text-brand">
           Loan Details
         </h1>
@@ -163,7 +140,6 @@ function LoanInput() {
           Enter your loan details to understand its true cost.
         </p>
 
-        {/* Loan form */}
         <form onSubmit={handleSubmit} noValidate>
 
           <Card className="mt-8">
@@ -172,7 +148,6 @@ function LoanInput() {
               Loan Information
             </h2>
 
-            {/* Input fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
               {fields.map((field) => (
@@ -184,40 +159,22 @@ function LoanInput() {
                     handleChange(field.name, value)
                   }
                   error={errors[field.name]}
-                  placeholder={field.placeholder}
-                  type="number"
-                  step="any"
-                  min="0"
+                  placeholder="Enter value"
                 />
               ))}
 
             </div>
 
-            {/* Submit button */}
             <div className="mt-8">
               <Button type="submit" block>
                 Validate Loan Details
               </Button>
             </div>
 
-            {/* Success message */}
-            {success && (
-              <div className="mt-5 p-4 rounded-lg bg-good-bg border border-good-line text-good-text">
-                <p className="font-semibold">
-                  Loan details validated successfully!
-                </p>
-
-                <p className="text-sm mt-1">
-                  Your information is ready for calculation integration.
-                </p>
-              </div>
-            )}
-
           </Card>
 
         </form>
 
-        {/* Disclaimer */}
         <p className="text-center text-sm text-muted mt-8">
           Educational tool, not financial advice.
         </p>
