@@ -1,6 +1,5 @@
 
 import { useState } from 'react'
-import { calculateLoan } from '../../logic/calculate'
 
 const initialForm = {
   amount: '50000',
@@ -19,6 +18,7 @@ function LoanInput({ onSubmitSuccess, onBack }) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target
 
@@ -35,6 +35,7 @@ function LoanInput({ onSubmitSuccess, onBack }) {
     setError('')
   }
 
+  // Validate all inputs
   const validate = () => {
     const newErrors = {}
 
@@ -57,15 +58,18 @@ function LoanInput({ onSubmitSuccess, onBack }) {
       Number(form.tenureMonths) <= 0 ||
       !Number.isInteger(Number(form.tenureMonths))
     ) {
-      newErrors.tenureMonths = 'Enter a valid whole number of months'
+      newErrors.tenureMonths =
+        'Enter a valid whole number of months'
     }
 
     if (Number(form.monthlyIncome) <= 0) {
-      newErrors.monthlyIncome = 'Monthly income must be above zero'
+      newErrors.monthlyIncome =
+        'Monthly income must be above zero'
     }
 
     if (
-      Number(form.monthlyExpenses) > Number(form.monthlyIncome)
+      Number(form.monthlyExpenses) >
+      Number(form.monthlyIncome)
     ) {
       newErrors.monthlyExpenses =
         'Expenses cannot exceed monthly income'
@@ -76,6 +80,7 @@ function LoanInput({ onSubmitSuccess, onBack }) {
     return Object.keys(newErrors).length === 0
   }
 
+  // Submit loan information to App.jsx
   const handleSubmit = (e) => {
     e.preventDefault()
 
@@ -83,7 +88,10 @@ function LoanInput({ onSubmitSuccess, onBack }) {
 
     setError('')
 
-    if (!validate()) {
+    if (!validate()) return
+
+    if (typeof onSubmitSuccess !== 'function') {
+      setError('Results screen connection is missing.')
       return
     }
 
@@ -104,28 +112,28 @@ function LoanInput({ onSubmitSuccess, onBack }) {
         monthlyExpenses: Number(form.monthlyExpenses)
       }
 
-      const result = calculateLoan(terms, affordability)
+      console.log('Submitting loan data:', {
+        terms,
+        affordability
+      })
 
-      if (!result || !Number.isFinite(result.emi)) {
-        throw new Error('Calculation returned an invalid result.')
-      }
-
-      console.log('Calculated loan result:', result)
-
-      if (typeof onSubmitSuccess === 'function') {
-        onSubmitSuccess(result)
-      } else {
-        throw new Error('Results screen connection is missing.')
-      }
+      // App.jsx performs the actual calculation
+      onSubmitSuccess({
+        terms,
+        affordability
+      })
 
     } catch (err) {
-      console.error('Loan calculation error:', err)
-      setError(err.message || 'Unable to calculate your loan.')
+      console.error('Loan submission error:', err)
+      setError(
+        err.message || 'Unable to submit loan details.'
+      )
     } finally {
       setLoading(false)
     }
   }
 
+  // Input fields
   const fields = [
     {
       name: 'amount',
@@ -239,7 +247,7 @@ function LoanInput({ onSubmitSuccess, onBack }) {
             {/* INPUT GRID */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
 
-              {fields.map((field, index) => (
+              {fields.map((field) => (
                 <div key={field.name}>
 
                   <label
@@ -287,8 +295,12 @@ function LoanInput({ onSubmitSuccess, onBack }) {
 
             {/* ERROR MESSAGE */}
             {error && (
-              <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
-                <strong>Calculation Error:</strong> {error}
+              <div
+                role="alert"
+                className="mt-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm"
+              >
+                <strong>Calculation Error:</strong>
+                {' '}{error}
               </div>
             )}
 
@@ -296,23 +308,27 @@ function LoanInput({ onSubmitSuccess, onBack }) {
             <button
               type="submit"
               disabled={loading}
-              className="relative z-20 pointer-events-auto w-full mt-8 bg-teal-700 hover:bg-teal-800 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl shadow-lg shadow-teal-700/20 transition cursor-pointer"
+              className="relative z-20 w-full mt-8 bg-teal-700 hover:bg-teal-800 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl shadow-lg shadow-teal-700/20 transition cursor-pointer"
             >
-              {loading ? 'Calculating...' : 'Calculate My Loan →'}
+              {loading
+                ? 'Calculating...'
+                : 'Calculate My Loan →'}
             </button>
 
           </form>
 
         </div>
 
-        {/* INFORMATION CARD */}
+        {/* INFORMATION CARDS */}
         <div className="mt-7 grid grid-cols-1 sm:grid-cols-2 gap-5">
 
           <div className="bg-white/80 border border-slate-200 rounded-2xl p-5">
             <div className="text-teal-700 text-2xl mb-2">₹</div>
+
             <h3 className="font-bold text-slate-800">
               Transparent Costs
             </h3>
+
             <p className="text-sm text-slate-500 mt-2">
               Understand interest, fees and GST separately.
             </p>
@@ -320,9 +336,11 @@ function LoanInput({ onSubmitSuccess, onBack }) {
 
           <div className="bg-white/80 border border-slate-200 rounded-2xl p-5">
             <div className="text-teal-700 text-2xl mb-2">✓</div>
+
             <h3 className="font-bold text-slate-800">
               Affordability Analysis
             </h3>
+
             <p className="text-sm text-slate-500 mt-2">
               Check how your EMI compares with your available monthly money.
             </p>
