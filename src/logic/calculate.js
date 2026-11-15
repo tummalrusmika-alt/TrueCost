@@ -201,3 +201,28 @@ export function calculateLoan(terms, affordability) {
     reasons
   };
 }
+
+// Compare two loan offers.
+export function compareLoanOffers(offerA, offerB, affordability) {
+  const resultA = calculateLoan(offerA, affordability);
+  const resultB = calculateLoan(offerB, affordability);
+
+  let betterOffer;
+
+  if (resultA.totalPaid < resultB.totalPaid) {
+    betterOffer = "Offer A";
+  } else if (resultB.totalPaid < resultA.totalPaid) {
+    betterOffer = "Offer B";
+  } else {
+    betterOffer = "Both offers have equal total costs";
+  }
+
+  return {
+    offerA: resultA,
+    offerB: resultB,
+    betterOffer,
+    savings: round2(
+      Math.abs(resultA.totalPaid - resultB.totalPaid)
+    )
+  };
+}

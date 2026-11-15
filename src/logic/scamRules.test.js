@@ -1,6 +1,5 @@
 
-import { test } from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vitest";
 
 import { checkScamRules } from "./scamRules.js";
 
@@ -10,10 +9,10 @@ test("detects a normal loan message as low risk", () => {
     "Our bank offers personal loans. Please read the loan terms on our official website."
   );
 
-  assert.equal(result.riskLevel, "Low");
-  assert.deepEqual(result.redFlags, []);
-  assert.equal(result.explanation, "");
-  assert.ok(Array.isArray(result.nextSteps));
+  expect(result.riskLevel).toBe("Low");
+  expect(result.redFlags).toEqual([]);
+  expect(result.explanation).toBe("");
+  expect(Array.isArray(result.nextSteps)).toBe(true);
 });
 
 // Test 2: Upfront payment request.
@@ -22,8 +21,8 @@ test("detects an upfront payment request", () => {
     "Pay the processing fee before your loan is approved."
   );
 
-  assert.equal(result.riskLevel, "Medium");
-  assert.ok(result.redFlags.length > 0);
+  expect(result.riskLevel).toBe("Medium");
+  expect(result.redFlags.length).toBeGreaterThan(0);
 });
 
 // Test 3: Urgent payment with upfront fee.
@@ -32,21 +31,21 @@ test("detects high risk when upfront fee and urgency are present", () => {
     "Pay the processing fee immediately within 10 minutes to receive your loan."
   );
 
-  assert.equal(result.riskLevel, "High");
-  assert.ok(result.redFlags.length >= 2);
-  assert.ok(result.nextSteps.length > 0);
+  expect(result.riskLevel).toBe("High");
+  expect(result.redFlags.length).toBeGreaterThanOrEqual(2);
+  expect(result.nextSteps.length).toBeGreaterThan(0);
 });
 
 // Test 4: Empty message validation.
 test("rejects an empty message", () => {
-  assert.throws(() => {
+  expect(() => {
     checkScamRules("");
-  }, /Please provide a valid message/);
+  }).toThrow(/Please provide a valid message/);
 });
 
 // Test 5: Rejects invalid input.
 test("rejects non-string input", () => {
-  assert.throws(() => {
+  expect(() => {
     checkScamRules(null);
-  }, /Please provide a valid message/);
+  }).toThrow(/Please provide a valid message/);
 });

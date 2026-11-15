@@ -143,3 +143,48 @@ The project is developed collaboratively. Each team member works on assigned res
 ---
 
 **TrueCost – Understand Before You Borrow.**
+
+## Person B – Loan Calculation Engine
+
+The calculation engine is implemented in JavaScript in `src/logic/calculate.js`.
+
+### 1. EMI Calculation
+Uses the reducing-balance EMI formula:
+
+EMI = P × r × (1+r)^n / ((1+r)^n - 1)
+
+Where:
+- P = Loan principal
+- r = Monthly interest rate
+- n = Loan tenure in months
+
+For zero-interest loans, EMI = P / n.
+
+### 2. Loan Cost Calculation
+- Total Interest = Total EMI Payments - Principal
+- Processing Fees = Processing Fee + Other Charges
+- GST = Processing Fee × GST Percentage / 100
+- Total Paid = Total EMI Payments + Fees + GST
+- Money Received = Loan Amount - Upfront Charges
+
+### 3. Effective Interest Rate
+Uses the monthly Internal Rate of Return (IRR), calculated using the bisection method.
+
+Annualized Rate = Monthly IRR × 12 × 100
+
+### 4. Affordability Analysis
+- Money Left = Monthly Income - Monthly Expenses
+- EMI Share = EMI / Money Left × 100
+
+### 5. Loan Verdict
+- Good: EMI takes up to 30% of remaining money.
+- Okay: EMI takes more than 30% but no more than 50%.
+- Avoid: EMI takes more than 50%, or no money remains.
+
+### 6. Testing
+Automated tests are written using Vitest.
+
+Current test coverage:
+- Loan calculation: 7 tests
+- Scam detection: 5 tests
+- Total: 12 passing tests.
