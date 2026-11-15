@@ -2,199 +2,192 @@
 import Card from '../ui/Card'
 import Button from '../ui/Button'
 
-function Results({ result, onBack }) {
+function formatRupees(value) {
+  const number = Number(value)
+
+  if (!Number.isFinite(number)) return '—'
+
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(number)
+}
+
+function formatPercent(value) {
+  const number = Number(value)
+
+  if (!Number.isFinite(number)) return '—'
+
+  return `${number.toFixed(2)}%`
+}
+
+function Results({ result, onBack, onShowVerdict }) {
   if (!result) {
     return (
-      <div className="min-h-screen bg-page p-6 font-sans">
-        <Card>
-          <p className="text-ink">
-            No calculation results available.
-          </p>
-          <Button onClick={onBack} className="mt-4">
-            Back to Loan Details
-          </Button>
-        </Card>
+      <div className="min-h-screen bg-page p-8">
+        <p className="text-ink">No calculation result available.</p>
+        <Button onClick={onBack}>Back</Button>
       </div>
     )
   }
 
-  // Format values for display only
-  const formatRupees = (value) => {
-    if (typeof value !== 'number' || !Number.isFinite(value)) {
-      return '—'
-    }
-
-    return `₹${new Intl.NumberFormat('en-IN', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value)}`
-  }
-
-  const formatPercent = (value) => {
-    if (typeof value !== 'number' || !Number.isFinite(value)) {
-      return '—'
-    }
-
-    return `${value.toFixed(2)}%`
-  }
-
-  const resultItems = [
+  const metrics = [
     {
       label: 'Monthly EMI',
       value: formatRupees(result.emi),
+      description: 'Your monthly instalment',
     },
     {
       label: 'Total Interest',
       value: formatRupees(result.totalInterest),
+      description: 'Interest over the loan tenure',
     },
     {
-      label: 'Fees',
+      label: 'Processing Fees & Charges',
       value: formatRupees(result.fees),
+      description: 'Upfront loan charges',
     },
     {
       label: 'GST on Fees',
       value: formatRupees(result.gstAmount),
+      description: 'GST applied to processing fee',
     },
     {
       label: 'Total Amount Paid',
       value: formatRupees(result.totalPaid),
+      description: 'Your total repayment',
     },
     {
-      label: 'Actual Money Received',
+      label: 'Money Received',
       value: formatRupees(result.moneyReceived),
+      description: 'Amount received after upfront deductions',
     },
     {
       label: 'Effective Annual Rate',
       value: formatPercent(result.effectiveRatePercent),
+      description: result.annualizationMethod || 'Monthly IRR × 12',
     },
   ]
 
   return (
-    <div className="min-h-screen bg-page px-4 sm:px-6 py-10 font-sans">
+    <div className="min-h-screen bg-page text-ink font-sans">
 
-      <div className="max-w-4xl mx-auto">
-
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-brand">
-            Your Loan Results
+      {/* Header */}
+      <header className="bg-white border-b border-line">
+        <div className="max-w-6xl mx-auto px-5 py-5 flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-brand">
+            TrueCost
           </h1>
 
+          <span className="text-sm text-muted">
+            Loan Analysis
+          </span>
+        </div>
+      </header>
+
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+
+        {/* Title */}
+        <div className="mb-8">
+          <p className="text-sm font-semibold text-brand uppercase tracking-wider">
+            Your Loan Report
+          </p>
+
+          <h2 className="text-3xl sm:text-4xl font-bold mt-2">
+            Loan Results
+          </h2>
+
           <p className="text-muted mt-2">
-            Understand what your loan actually costs.
+            Here is the complete breakdown of your loan.
           </p>
         </div>
 
-        {/* Hidden extra highlight */}
-        <Card className="mb-6">
-          <p className="text-sm font-semibold text-muted">
+        {/* Highlight */}
+        <div className="bg-gradient-to-r from-brand to-brand-dark rounded-2xl p-6 sm:p-8 text-white shadow-lg mb-8">
+          <p className="text-sm text-white/80">
             Hidden Extra Cost
           </p>
 
-          <div className="w-12 h-1 bg-accent rounded-full mt-3 mb-4" />
-
-          <h2 className="text-4xl sm:text-5xl font-bold text-ink">
+          <h3 className="text-3xl sm:text-4xl font-bold mt-2">
             {formatRupees(result.hiddenExtra)}
-          </h2>
+          </h3>
 
-          <p className="text-sm text-muted mt-3">
-            Additional amount paid beyond the advertised interest.
+          <p className="text-sm text-white/80 mt-3">
+            Additional charges beyond the advertised interest.
           </p>
-        </Card>
 
-        {/* Main results */}
-        <Card className="mb-6">
+          <div className="h-1 w-16 bg-accent rounded-full mt-5" />
+        </div>
 
-          <h2 className="text-xl font-bold text-ink mb-6">
-            Loan Breakdown
-          </h2>
+        {/* Results grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          {metrics.map((item) => (
+            <Card key={item.label}>
+              <p className="text-sm text-muted">
+                {item.label}
+              </p>
 
-            {resultItems.map((item) => (
-              <div
-                key={item.label}
-                className="bg-page rounded-lg p-4"
-              >
-                <p className="text-sm text-muted">
-                  {item.label}
-                </p>
+              <h3 className="text-xl sm:text-2xl font-bold text-ink mt-3 break-words">
+                {item.value}
+              </h3>
 
-                <p className="text-xl font-bold text-ink mt-2 break-words">
-                  {item.value}
-                </p>
-              </div>
-            ))}
-
-          </div>
-
-          {/* Annualization method */}
-          <div className="mt-6 border-t border-line pt-4">
-            <p className="text-sm text-muted">
-              Annualization Method
-            </p>
-
-            <p className="font-medium text-ink mt-1">
-              {result.annualizationMethod || 'Not provided'}
-            </p>
-
-            <p className="text-xs text-muted mt-2">
-              Effective annual rate (monthly IRR × 12)
-            </p>
-          </div>
-
-        </Card>
-
-        {/* Assumptions */}
-        <Card className="mb-6 bg-brand-tint">
-
-          <h2 className="text-xl font-bold text-brand mb-4">
-            Calculation Assumptions
-          </h2>
-
-          {Array.isArray(result.assumptions) &&
-          result.assumptions.length > 0 ? (
-            <ul className="space-y-3">
-              {result.assumptions.map((assumption, index) => (
-                <li
-                  key={index}
-                  className="flex gap-3 text-sm text-ink"
-                >
-                  <span className="text-brand font-bold">
-                    ✓
-                  </span>
-
-                  <span>{assumption}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted">
-              No assumptions provided.
-            </p>
-          )}
-
-        </Card>
-
-        {/* Navigation */}
-        <div className="flex flex-col sm:flex-row gap-3">
-
-          <Button
-            variant="secondary"
-            onClick={onBack}
-            block
-          >
-            Back to Loan Details
-          </Button>
+              <p className="text-xs text-muted mt-2">
+                {item.description}
+              </p>
+            </Card>
+          ))}
 
         </div>
 
+        {/* Assumptions */}
+        <div className="bg-brand-tint border border-brand/20 rounded-xl p-6 mt-8">
+          <h3 className="text-lg font-bold text-brand">
+            Calculation Assumptions
+          </h3>
+
+          <ul className="mt-4 space-y-3">
+            {(Array.isArray(result.assumptions)
+              ? result.assumptions
+              : []
+            ).map((item, index) => (
+              <li
+                key={index}
+                className="flex gap-3 text-sm text-ink"
+              >
+                <span className="text-brand font-bold">✓</span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
         {/* Disclaimer */}
-        <p className="text-center text-sm text-muted mt-8">
+        <p className="text-center text-xs text-muted mt-8">
           Educational tool, not financial advice.
         </p>
 
-      </div>
+        {/* Buttons */}
+        <div className="flex flex-col sm:flex-row gap-4 mt-8">
+          <Button
+            onClick={onBack}
+            variant="secondary"
+            block
+          >
+            ← Edit Loan Details
+          </Button>
+
+          <Button
+            onClick={onShowVerdict}
+            block
+          >
+            View Loan Verdict →
+          </Button>
+        </div>
+
+      </main>
     </div>
   )
 }

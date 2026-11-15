@@ -1,4 +1,3 @@
-
 // src/logic/calculate.js
 
 // Round values only when returning the final result.

@@ -1,44 +1,44 @@
 
 import { useState } from 'react'
-import Card from '../ui/Card'
-import Button from '../ui/Button'
-import Field from '../ui/Field'
 
-function LoanInput() {
-  const [form, setForm] = useState({
-    amount: '50000',
-    tenureMonths: '12',
-    annualRatePercent: '12',
-    processingFee: '1000',
-    gstOnFeesPercent: '18',
-    otherCharges: '0',
-    monthlyIncome: '',
-    monthlyExpenses: '',
-  })
+const initialForm = {
+  amount: '50000',
+  tenureMonths: '12',
+  annualRatePercent: '14',
+  processingFee: '999',
+  gstOnFeesPercent: '18',
+  otherCharges: '0',
+  monthlyIncome: '30000',
+  monthlyExpenses: '20000'
+}
 
+function LoanInput({ onSubmitSuccess, onBack }) {
+  const [form, setForm] = useState(initialForm)
   const [errors, setErrors] = useState({})
-  const [success, setSuccess] = useState(false)
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   // Handle input changes
-  const handleChange = (name, value) => {
-    setForm((prev) => ({
+  const handleChange = (e) => {
+    const { name, value } = e.target
+
+    setForm(prev => ({
       ...prev,
-      [name]: value,
+      [name]: value
     }))
 
-    setErrors((prev) => ({
+    setErrors(prev => ({
       ...prev,
-      [name]: '',
+      [name]: ''
     }))
 
-    setSuccess(false)
+    setError('')
   }
 
-  // Validate all loan details
+  // Validate all inputs
   const validate = () => {
     const newErrors = {}
 
-    // Check empty and negative values
     Object.entries(form).forEach(([key, value]) => {
       if (value.trim() === '') {
         newErrors[key] = 'This field is required'
@@ -50,41 +50,29 @@ function LoanInput() {
       }
     })
 
-    // Loan amount must be greater than zero
-    if (
-      form.amount !== '' &&
-      Number(form.amount) <= 0
-    ) {
-      newErrors.amount = 'Loan amount must be above 0'
+    if (Number(form.amount) <= 0) {
+      newErrors.amount = 'Loan amount must be above zero'
     }
 
-    // Tenure must be greater than zero
     if (
-      form.tenureMonths !== '' &&
-      Number(form.tenureMonths) <= 0
+      Number(form.tenureMonths) <= 0 ||
+      !Number.isInteger(Number(form.tenureMonths))
     ) {
-      newErrors.tenureMonths = 'Tenure must be above 0'
+      newErrors.tenureMonths =
+        'Enter a valid whole number of months'
     }
 
-    // Monthly income must be greater than zero
-    if (
-      form.monthlyIncome !== '' &&
-      Number(form.monthlyIncome) <= 0
-    ) {
+    if (Number(form.monthlyIncome) <= 0) {
       newErrors.monthlyIncome =
-        'Monthly income must be above 0'
+        'Monthly income must be above zero'
     }
 
-    // Monthly expenses cannot exceed monthly income
     if (
-      form.monthlyIncome !== '' &&
-      form.monthlyExpenses !== '' &&
-      Number.isFinite(Number(form.monthlyIncome)) &&
-      Number.isFinite(Number(form.monthlyExpenses)) &&
-      Number(form.monthlyExpenses) > Number(form.monthlyIncome)
+      Number(form.monthlyExpenses) >
+      Number(form.monthlyIncome)
     ) {
       newErrors.monthlyExpenses =
-        'Monthly expenses cannot be greater than monthly income'
+        'Expenses cannot exceed monthly income'
     }
 
     setErrors(newErrors)
@@ -92,134 +80,277 @@ function LoanInput() {
     return Object.keys(newErrors).length === 0
   }
 
-  // Handle form submission
+  // Submit loan information to App.jsx
   const handleSubmit = (e) => {
     e.preventDefault()
 
-    setSuccess(false)
+    if (loading) return
 
-    if (validate()) {
-      setSuccess(true)
+    setError('')
 
-      console.log('Validated loan details:', form)
+    if (!validate()) return
+
+    if (typeof onSubmitSuccess !== 'function') {
+      setError('Results screen connection is missing.')
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      const terms = {
+        amount: Number(form.amount),
+        tenureMonths: Number(form.tenureMonths),
+        annualRatePercent: Number(form.annualRatePercent),
+        processingFee: Number(form.processingFee),
+        gstOnFeesPercent: Number(form.gstOnFeesPercent),
+        otherCharges: Number(form.otherCharges)
+      }
+
+      const affordability = {
+        monthlyIncome: Number(form.monthlyIncome),
+        monthlyExpenses: Number(form.monthlyExpenses)
+      }
+
+      console.log('Submitting loan data:', {
+        terms,
+        affordability
+      })
+
+      // App.jsx performs the actual calculation
+      onSubmitSuccess({
+        terms,
+        affordability
+      })
+
+    } catch (err) {
+      console.error('Loan submission error:', err)
+      setError(
+        err.message || 'Unable to submit loan details.'
+      )
+    } finally {
+      setLoading(false)
     }
   }
 
-  // Form fields
+  // Input fields
   const fields = [
     {
       name: 'amount',
-      label: 'Loan Amount (₹)',
-      placeholder: 'Example: 50000',
+      label: 'Loan Amount',
+      suffix: '₹',
+      placeholder: '50000'
     },
     {
       name: 'tenureMonths',
-      label: 'Loan Tenure (Months)',
-      placeholder: 'Example: 12',
+      label: 'Loan Tenure',
+      suffix: 'Months',
+      placeholder: '12'
     },
     {
       name: 'annualRatePercent',
-      label: 'Annual Interest Rate (%)',
-      placeholder: 'Example: 12',
+      label: 'Annual Interest Rate',
+      suffix: '%',
+      placeholder: '14'
     },
     {
       name: 'processingFee',
-      label: 'Processing Fee (₹)',
-      placeholder: 'Example: 1000',
+      label: 'Processing Fee',
+      suffix: '₹',
+      placeholder: '999'
     },
     {
       name: 'gstOnFeesPercent',
-      label: 'GST on Fees (%)',
-      placeholder: 'Example: 18',
+      label: 'GST on Fees',
+      suffix: '%',
+      placeholder: '18'
     },
     {
       name: 'otherCharges',
-      label: 'Other Charges (₹)',
-      placeholder: 'Example: 0',
+      label: 'Other Charges',
+      suffix: '₹',
+      placeholder: '0'
     },
     {
       name: 'monthlyIncome',
-      label: 'Monthly Income (₹)',
-      placeholder: 'Enter monthly income',
+      label: 'Monthly Income',
+      suffix: '₹',
+      placeholder: '30000'
     },
     {
       name: 'monthlyExpenses',
-      label: 'Monthly Expenses (₹)',
-      placeholder: 'Enter monthly expenses',
-    },
+      label: 'Monthly Expenses',
+      suffix: '₹',
+      placeholder: '20000'
+    }
   ]
 
   return (
-    <div className="min-h-screen bg-page px-4 sm:px-6 py-10 font-sans">
+    <div className="relative min-h-screen overflow-hidden bg-slate-50 font-sans">
 
-      <div className="max-w-3xl mx-auto">
+      {/* BACKGROUND DESIGN */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
 
-        {/* Heading */}
-        <h1 className="text-3xl font-bold text-brand">
-          Loan Details
-        </h1>
+        <div className="absolute -top-32 -right-20 w-96 h-96 rounded-full bg-teal-200/40 blur-3xl" />
 
-        <p className="text-muted mt-2">
-          Enter your loan details to understand its true cost.
-        </p>
+        <div className="absolute top-1/3 -left-32 w-96 h-96 rounded-full bg-emerald-200/40 blur-3xl" />
 
-        {/* Loan form */}
-        <form onSubmit={handleSubmit} noValidate>
+        <div className="absolute bottom-0 right-1/4 w-80 h-80 rounded-full bg-amber-100/50 blur-3xl" />
 
-          <Card className="mt-8">
+      </div>
 
-            <h2 className="text-xl font-semibold text-ink mb-6">
+      {/* MAIN CONTENT */}
+      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 py-10">
+
+        {/* BACK BUTTON */}
+        <button
+          type="button"
+          onClick={onBack}
+          className="mb-8 inline-flex items-center gap-2 text-teal-700 font-semibold hover:text-teal-900 cursor-pointer"
+        >
+          ← Back to Home
+        </button>
+
+        {/* PAGE HEADER */}
+        <div className="mb-8">
+
+          <span className="inline-block bg-teal-100 text-teal-800 px-4 py-2 rounded-full text-xs font-bold tracking-wider">
+            SMART LOAN ANALYSIS
+          </span>
+
+          <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mt-5">
+            Calculate Your Loan
+          </h1>
+
+          <p className="text-slate-500 mt-3 text-base sm:text-lg">
+            Understand your EMI, hidden charges and actual loan cost
+            before making a financial decision.
+          </p>
+
+        </div>
+
+        {/* FORM CARD */}
+        <div className="bg-white/90 backdrop-blur-xl border border-slate-200 rounded-3xl shadow-xl shadow-slate-200/60 p-5 sm:p-8">
+
+          <div className="mb-7">
+            <h2 className="text-xl font-bold text-slate-900">
               Loan Information
             </h2>
 
-            {/* Input fields */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <p className="text-sm text-slate-500 mt-2">
+              Enter the details provided by your lender.
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} noValidate>
+
+            {/* INPUT GRID */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
 
               {fields.map((field) => (
-                <Field
-                  key={field.name}
-                  label={field.label}
-                  value={form[field.name]}
-                  onChange={(value) =>
-                    handleChange(field.name, value)
-                  }
-                  error={errors[field.name]}
-                  placeholder={field.placeholder}
-                  type="number"
-                  step="any"
-                  min="0"
-                />
+                <div key={field.name}>
+
+                  <label
+                    htmlFor={field.name}
+                    className="block text-sm font-semibold text-slate-700 mb-2"
+                  >
+                    {field.label}
+                  </label>
+
+                  <div className="relative">
+
+                    <input
+                      id={field.name}
+                      type="number"
+                      name={field.name}
+                      value={form[field.name]}
+                      onChange={handleChange}
+                      placeholder={field.placeholder}
+                      min="0"
+                      step="any"
+                      required
+                      className={`w-full rounded-xl border bg-slate-50 px-4 py-3 pr-14 text-slate-900 outline-none transition focus:bg-white focus:ring-2 focus:ring-teal-500 ${
+                        errors[field.name]
+                          ? 'border-red-400'
+                          : 'border-slate-200'
+                      }`}
+                    />
+
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400 pointer-events-none">
+                      {field.suffix}
+                    </span>
+
+                  </div>
+
+                  {errors[field.name] && (
+                    <p className="text-red-600 text-xs mt-2">
+                      {errors[field.name]}
+                    </p>
+                  )}
+
+                </div>
               ))}
 
             </div>
 
-            {/* Submit button */}
-            <div className="mt-8">
-              <Button type="submit" block>
-                Validate Loan Details
-              </Button>
-            </div>
-
-            {/* Success message */}
-            {success && (
-              <div className="mt-5 p-4 rounded-lg bg-good-bg border border-good-line text-good-text">
-                <p className="font-semibold">
-                  Loan details validated successfully!
-                </p>
-
-                <p className="text-sm mt-1">
-                  Your information is ready for calculation integration.
-                </p>
+            {/* ERROR MESSAGE */}
+            {error && (
+              <div
+                role="alert"
+                className="mt-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm"
+              >
+                <strong>Calculation Error:</strong>
+                {' '}{error}
               </div>
             )}
 
-          </Card>
+            {/* CALCULATE BUTTON */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="relative z-20 w-full mt-8 bg-teal-700 hover:bg-teal-800 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl shadow-lg shadow-teal-700/20 transition cursor-pointer"
+            >
+              {loading
+                ? 'Calculating...'
+                : 'Calculate My Loan →'}
+            </button>
 
-        </form>
+          </form>
 
-        {/* Disclaimer */}
-        <p className="text-center text-sm text-muted mt-8">
-          Educational tool, not financial advice.
+        </div>
+
+        {/* INFORMATION CARDS */}
+        <div className="mt-7 grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+          <div className="bg-white/80 border border-slate-200 rounded-2xl p-5">
+            <div className="text-teal-700 text-2xl mb-2">₹</div>
+
+            <h3 className="font-bold text-slate-800">
+              Transparent Costs
+            </h3>
+
+            <p className="text-sm text-slate-500 mt-2">
+              Understand interest, fees and GST separately.
+            </p>
+          </div>
+
+          <div className="bg-white/80 border border-slate-200 rounded-2xl p-5">
+            <div className="text-teal-700 text-2xl mb-2">✓</div>
+
+            <h3 className="font-bold text-slate-800">
+              Affordability Analysis
+            </h3>
+
+            <p className="text-sm text-slate-500 mt-2">
+              Check how your EMI compares with your available monthly money.
+            </p>
+          </div>
+
+        </div>
+
+        {/* DISCLAIMER */}
+        <p className="text-center text-xs text-slate-500 mt-10">
+          TrueCost is an educational tool, not financial advice.
         </p>
 
       </div>
