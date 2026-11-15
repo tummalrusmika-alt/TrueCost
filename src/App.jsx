@@ -21,7 +21,6 @@ function App() {
             <h1 className="text-2xl font-bold text-brand">
               TrueCost
             </h1>
-
             <p className="text-sm text-muted mt-1">
               Understand your loan before you borrow.
             </p>
@@ -46,7 +45,6 @@ function App() {
             </p>
 
             <button
-              type="button"
               onClick={() => setCurrentScreen('loan')}
               className="mt-8 bg-brand hover:bg-brand-dark text-white font-semibold px-8 py-3 rounded-xl"
             >
@@ -55,14 +53,12 @@ function App() {
 
           </section>
 
-          {/* FEATURE CARDS */}
           <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-16">
 
             <div className="bg-white border border-line rounded-xl shadow-sm p-6">
               <h3 className="font-bold text-lg text-brand">
                 Loan Calculator
               </h3>
-
               <p className="text-muted mt-3 text-sm">
                 Calculate EMI, interest, fees and the actual amount you receive.
               </p>
@@ -72,7 +68,6 @@ function App() {
               <h3 className="font-bold text-lg text-brand">
                 Affordability Check
               </h3>
-
               <p className="text-muted mt-3 text-sm">
                 Understand whether your monthly income can comfortably support the loan.
               </p>
@@ -82,7 +77,6 @@ function App() {
               <h3 className="font-bold text-lg text-brand">
                 Scam Detection
               </h3>
-
               <p className="text-muted mt-3 text-sm">
                 Identify suspicious loan messages and potential red flags.
               </p>
@@ -90,16 +84,22 @@ function App() {
 
           </section>
 
-          {/* SCAM CHECK BUTTON */}
-          <div className="text-center mt-12">
+          <section className="text-center mt-12">
+            <h2 className="text-2xl font-bold text-brand">
+              Worried about a loan offer?
+            </h2>
+
+            <p className="text-muted mt-3">
+              Check suspicious loan messages for possible warning signs.
+            </p>
+
             <button
-              type="button"
               onClick={() => setCurrentScreen('scam')}
-              className="bg-brand hover:bg-brand-dark text-white font-semibold px-8 py-3 rounded-xl"
+              className="mt-6 bg-brand hover:bg-brand-dark text-white font-semibold px-8 py-3 rounded-xl"
             >
-              Check Loan Message
+              Check Loan Message →
             </button>
-          </div>
+          </section>
 
           <p className="text-center text-sm text-muted mt-16">
             Educational tool, not financial advice.
@@ -110,12 +110,11 @@ function App() {
     )
   }
 
-  // LOAN INPUT SCREEN
+  // LOAN INPUT
   if (currentScreen === 'loan') {
     return (
       <div className="min-h-screen bg-page">
         <button
-          type="button"
           onClick={() => setCurrentScreen('home')}
           className="m-4 px-4 py-2 rounded-lg border border-line bg-white text-brand"
         >
@@ -129,7 +128,7 @@ function App() {
     )
   }
 
-  // RESULTS SCREEN
+  // RESULTS
   if (currentScreen === 'results') {
     return (
       <Results
@@ -140,7 +139,7 @@ function App() {
     )
   }
 
-  // VERDICT SCREEN
+  // VERDICT
   if (currentScreen === 'verdict') {
     return (
       <Verdict
@@ -150,7 +149,7 @@ function App() {
     )
   }
 
-  // SCAM DETECTION SCREEN
+  // SCAM DETECTION
   if (currentScreen === 'scam') {
     return (
       <ScamCheck
