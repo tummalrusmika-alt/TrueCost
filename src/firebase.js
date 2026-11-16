@@ -12,11 +12,7 @@ import {
   GoogleAIBackend
 } from "firebase/ai";
 
-// Enable debug mode only during local development
-if (import.meta.env.DEV) {
-  self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
-}
-
+// Firebase configuration
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -26,19 +22,36 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
+
+// App Check is optional for rendering the UI.
+// Configure the Enterprise site key to enable it.
+let appCheck = null;
 
 const siteKey = import.meta.env.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY;
 
-if (!siteKey) {
-  throw new Error("Missing reCAPTCHA Enterprise site key in .env");
+if (import.meta.env.DEV) {
+  self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
 }
 
-const appCheck = initializeAppCheck(app, {
-  provider: new ReCaptchaEnterpriseProvider(siteKey),
-  isTokenAutoRefreshEnabled: true
-});
+if (siteKey && siteKey.trim()) {
+  try {
+    appCheck = initializeAppCheck(app, {
+      provider: new ReCaptchaEnterpriseProvider(siteKey),
+      isTokenAutoRefreshEnabled: true
+    });
+    console.log("Firebase App Check initialized.");
+  } catch (error) {
+    console.error("Firebase App Check initialization failed:", error);
+  }
+} else {
+  console.warn(
+    "App Check site key is missing. UI can load, but AI requests may require App Check configuration."
+  );
+}
 
+// Initialize Firebase AI
 const ai = getAI(app, {
   backend: new GoogleAIBackend()
 });

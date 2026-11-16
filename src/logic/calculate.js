@@ -1,227 +1,127 @@
-// src/logic/calculate.js
+// All numbers in TrueCost are computed here (code), never by AI.
+// Effective annual rate uses ONE method everywhere: (1 + monthlyIRR)^12 - 1
 
-// Round values only when returning the final result.
-function round2(value) {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
+const num = (v) => {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+};
+
+export function calcEMI(principal, annualRatePct, months) {
+  const P = num(principal);
+  const n = Math.round(num(months));
+  if (P === 0 || n === 0) return 0;
+  const r = num(annualRatePct) / 12 / 100;
+  if (r === 0) return P / n;
+  const f = Math.pow(1 + r, n);
+  return (P * r * f) / (f - 1);
 }
 
-// Calculate EMI using the reducing-balance formula.
-function calculateEMI(amount, annualRatePercent, tenureMonths) {
-  const monthlyRate = annualRatePercent / 100 / 12;
+// Finds the monthly rate r where PV of all payments equals money received.
+export function solveMonthlyIRR(received, emi, months, otherCharges = 0) {
+  const n = Math.round(months);
+  const totalPaid = emi * n + otherCharges;
+  if (received <= 0 || n <= 0 || totalPaid <= received) return 0;
 
-  if (monthlyRate === 0) {
-    return amount / tenureMonths;
-  }
-
-  const factor = Math.pow(1 + monthlyRate, tenureMonths);
-
-  return (
-    amount * monthlyRate * factor / (factor - 1)
-  );
-}
-
-// Find monthly IRR using bisection.
-function calculateMonthlyIRR(emi, tenureMonths, moneyReceived) {
-  function presentValue(rate) {
-    if (rate === 0) return emi * tenureMonths;
-
-    return emi * (1 - Math.pow(1 + rate, -tenureMonths)) / rate;
-  }
-
-  let low = 0;
-  let high = 0.01;
-
-  // Find an upper bound for the monthly rate.
-  while (presentValue(high) > moneyReceived && high < 1e12) {
-    high *= 2;
-  }
-
-  if (presentValue(high) > moneyReceived) {
-    throw new Error("Unable to calculate the effective rate.");
-  }
-
-  // Narrow the result to the required precision.
-  for (let i = 0; i < 150; i++) {
-    const mid = (low + high) / 2;
-
-    if (presentValue(mid) > moneyReceived) {
-      low = mid;
-    } else {
-      high = mid;
-    }
-  }
-
-  return (low + high) / 2;
-}
-
-// Main loan calculation function.
-export function calculateLoan(terms, affordability) {
-  if (!terms || !affordability) {
-    throw new Error("Loan terms and affordability inputs are required.");
-  }
-
-  const {
-    amount,
-    tenureMonths,
-    annualRatePercent,
-    processingFee,
-    gstOnFeesPercent = 18,
-    otherCharges = 0
-  } = terms;
-
-  const { monthlyIncome, monthlyExpenses } = affordability;
-
-  const values = {
-    amount,
-    tenureMonths,
-    annualRatePercent,
-    processingFee,
-    gstOnFeesPercent,
-    otherCharges,
-    monthlyIncome,
-    monthlyExpenses
+  // Other charges are treated as paid in the last month.
+  const pv = (r) => {
+    let sum = 0;
+    for (let t = 1; t <= n; t++) sum += emi / Math.pow(1 + r, t);
+    sum += otherCharges / Math.pow(1 + r, n);
+    return sum;
   };
 
-  for (const [name, value] of Object.entries(values)) {
-    if (typeof value !== "number" || !Number.isFinite(value)) {
-      throw new Error(`${name} must be a valid number.`);
-    }
+  let lo = 0;
+  let hi = 1; // 100% per month upper bound
+  for (let i = 0; i < 200; i++) {
+    const mid = (lo + hi) / 2;
+    if (pv(mid) > received) lo = mid;
+    else hi = mid;
   }
+  return (lo + hi) / 2;
+}
 
-  if (amount <= 0) throw new Error("Loan amount must be above 0.");
-  if (!Number.isInteger(tenureMonths) || tenureMonths <= 0) {
-    throw new Error("Tenure must be a positive whole number of months.");
-  }
-  if (annualRatePercent < 0) {
-    throw new Error("Annual interest rate cannot be negative.");
-  }
-  if (processingFee < 0 || otherCharges < 0 || gstOnFeesPercent < 0) {
-    throw new Error("Fees and GST cannot be negative.");
-  }
-  if (monthlyIncome <= 0) {
-    throw new Error("Monthly income must be above 0.");
-  }
-  if (monthlyExpenses < 0) {
-    throw new Error("Monthly expenses cannot be negative.");
-  }
+export const annualize = (monthlyRate) => Math.pow(1 + monthlyRate, 12) - 1;
 
-  // Calculate loan costs.
-  const emi = calculateEMI(
-    amount,
-    annualRatePercent,
-    tenureMonths
-  );
+/**
+ * input: {
+ *   amount, annualRate (%), months,
+ *   rateType: 'reducing' | 'flat'   (default 'reducing')
+ *   processingFee (rupees, default 0), gstPct (default 18),
+ *   otherCharges (rupees, total, default 0)
+ * }
+ */
+export function analyzeLoan(input) {
+  const errors = [];
+  const amount = num(input.amount);
+  const months = Math.round(num(input.months));
+  const annualRate = Number(input.annualRate) >= 0 ? Number(input.annualRate) : 0;
+  const rateType = input.rateType === 'flat' ? 'flat' : 'reducing';
+  const processingFee = num(input.processingFee);
+  const gstPct = input.gstPct === undefined || input.gstPct === '' ? 18 : num(input.gstPct);
+  const otherCharges = num(input.otherCharges);
 
-  const totalInterest = emi * tenureMonths - amount;
-  const fees = processingFee + otherCharges;
-  const gstAmount = processingFee * gstOnFeesPercent / 100;
-  const hiddenExtra = fees + gstAmount;
-  const totalPaid = emi * tenureMonths + hiddenExtra;
-  const moneyReceived = amount - hiddenExtra;
+  if (amount === 0) errors.push('Enter a loan amount greater than 0.');
+  if (months === 0) errors.push('Enter a tenure of at least 1 month.');
+  if (months > 360) errors.push('Tenure looks unusually long. Please check.');
+  if (annualRate > 100) errors.push('Interest rate looks unusually high. Please check.');
+  if (errors.length) return { ok: false, errors };
 
-  if (moneyReceived <= 0) {
-    throw new Error("Upfront charges must be less than the loan amount.");
-  }
-
-  // Calculate annualized rate from monthly IRR.
-  const monthlyIRR = calculateMonthlyIRR(
-    emi,
-    tenureMonths,
-    moneyReceived
-  );
-
-  const effectiveRatePercent = monthlyIRR * 12 * 100;
-
-  // Calculate affordability.
-  const moneyLeft = monthlyIncome - monthlyExpenses;
-
-  const emiShareOfLeftPercent =
-    moneyLeft > 0 ? (emi / moneyLeft) * 100 : null;
-
-  // Apply the agreed verdict thresholds.
-  let verdict;
-
-  if (moneyLeft <= 0 || emiShareOfLeftPercent > 50) {
-    verdict = "Avoid";
-  } else if (emiShareOfLeftPercent > 30) {
-    verdict = "Okay";
+  let emi, totalInterest;
+  if (rateType === 'flat') {
+    totalInterest = amount * (annualRate / 100) * (months / 12);
+    emi = (amount + totalInterest) / months;
   } else {
-    verdict = "Good";
+    emi = calcEMI(amount, annualRate, months);
+    totalInterest = emi * months - amount;
   }
 
-  // Explain the result.
-  const reasons = [];
+  const gstOnFee = processingFee * (gstPct / 100);
+  const upfrontCharges = processingFee + gstOnFee;
+  const moneyReceived = amount - upfrontCharges;
+  const totalEmiPaid = emi * months;
+  const totalPaid = totalEmiPaid + otherCharges;
 
-  if (moneyLeft <= 0) {
-    reasons.push("No money is left after monthly expenses.");
-  } else {
-    reasons.push(
-      `The EMI takes ${round2(emiShareOfLeftPercent)}% of the money you have left each month.`
+  const monthlyIRR = solveMonthlyIRR(moneyReceived, emi, months, otherCharges);
+  const effectiveAnnualRate = annualize(monthlyIRR) * 100;
+
+  // Hidden extra = everything you pay beyond the stated interest
+  const hiddenExtra = processingFee + gstOnFee + otherCharges;
+  const totalCostOfBorrowing = totalPaid - moneyReceived;
+
+  const warnings = [];
+  if (moneyReceived <= 0) warnings.push('Fees are as large as the loan itself.');
+  if (effectiveAnnualRate - annualRate > 5)
+    warnings.push(
+      `Effective rate (${effectiveAnnualRate.toFixed(1)}%) is much higher than the stated rate (${annualRate}%).`
     );
-  }
 
-  if (hiddenExtra > 0) {
-    reasons.push(
-      `Fees and GST add ${round2(hiddenExtra)} rupees on top of the interest.`
-    );
-  }
-
-  if (verdict === "Avoid" && moneyLeft > 0) {
-    reasons.push("The EMI takes more than 50% of your remaining money.");
-  }
-
-  if (verdict === "Good") {
-    reasons.push("The EMI takes no more than 30% of your remaining money.");
-  }
-
-  // Return the agreed data shape.
   return {
-    emi: round2(emi),
-    totalInterest: round2(totalInterest),
-    fees: round2(fees),
-    gstAmount: round2(gstAmount),
-    hiddenExtra: round2(hiddenExtra),
-    totalPaid: round2(totalPaid),
-    moneyReceived: round2(moneyReceived),
-    effectiveRatePercent: round2(effectiveRatePercent),
-    annualizationMethod: "monthly IRR × 12",
+    ok: true,
+    warnings,
     assumptions: [
-      "EMI uses the reducing-balance formula at the advertised rate.",
-      "Processing fee, GST on the fee and other charges are deducted upfront.",
-      "GST is applied to the processing fee only, not to interest.",
-      "Effective rate = monthly IRR × 12."
+      `Rate type: ${rateType === 'flat' ? 'flat' : 'reducing balance'}`,
+      `GST on processing fee: ${gstPct}%`,
+      'Money received = loan amount - (processing fee + GST on fee)',
+      'Money paid = all EMIs + other listed charges',
+      'Effective rate = monthly IRR annualized as (1 + r)^12 - 1',
+      'Educational tool, not financial advice.',
     ],
-    moneyLeft: round2(moneyLeft),
-    emiShareOfLeftPercent:
-      emiShareOfLeftPercent === null
-        ? null
-        : round2(emiShareOfLeftPercent),
-    verdict,
-    reasons
+    inputs: { amount, annualRate, months, rateType, processingFee, gstPct, otherCharges },
+    emi,
+    principal: amount,
+    totalInterest,
+    processingFee,
+    gstOnFee,
+    otherCharges,
+    moneyReceived,
+    totalEmiPaid,
+    totalPaid,
+    totalCostOfBorrowing,
+    hiddenExtra,
+    effectiveAnnualRate,
+    statedAnnualRate: annualRate,
   };
 }
 
-// Compare two loan offers.
-export function compareLoanOffers(offerA, offerB, affordability) {
-  const resultA = calculateLoan(offerA, affordability);
-  const resultB = calculateLoan(offerB, affordability);
-
-  let betterOffer;
-
-  if (resultA.totalPaid < resultB.totalPaid) {
-    betterOffer = "Offer A";
-  } else if (resultB.totalPaid < resultA.totalPaid) {
-    betterOffer = "Offer B";
-  } else {
-    betterOffer = "Both offers have equal total costs";
-  }
-
-  return {
-    offerA: resultA,
-    offerB: resultB,
-    betterOffer,
-    savings: round2(
-      Math.abs(resultA.totalPaid - resultB.totalPaid)
-    )
-  };
-}
+export const rupees = (n) =>
+  '₹' + Math.round(n).toLocaleString('en-IN');

@@ -1,57 +1,33 @@
+import { calcEMI, analyzeLoan } from './calc.js';
+import { checkScamRisk } from './scamCheck.js';
 
-import { calculateLoan } from "./logic/calculate.js";
-
-const terms = {
-  amount: 50000,
-  tenureMonths: 12,
-  annualRatePercent: 14,
-  processingFee: 999,
-  gstOnFeesPercent: 18,
-  otherCharges: 0
+const approx = (a, b, tol = 0.01) => Math.abs(a - b) <= tol;
+let failed = 0;
+const check = (name, cond) => {
+  console.log((cond ? 'PASS ' : 'FAIL ') + name);
+  if (!cond) failed++;
 };
 
-const affordability = {
-  monthlyIncome: 30000,
-  monthlyExpenses: 20000
-};
+// Known calculator result: 1,00,000 @ 12% for 12 months => EMI 8884.88
+check('EMI 100000 @12% 12m', approx(calcEMI(100000, 12, 12), 8884.88));
+check('Zero interest', approx(calcEMI(12000, 0, 12), 1000));
+check('Bad input returns 0', calcEMI('', 12, 0) === 0);
 
-try {
-  const result = calculateLoan(terms, affordability);
+const r = analyzeLoan({ amount: 100000, annualRate: 12, months: 12 });
+check('No fees: effective ~ (1+0.01)^12-1 = 12.68%', approx(r.effectiveAnnualRate, 12.68, 0.05));
 
-  console.log("========== CALCULATION TEST ==========");
-  console.log(result);
+const f = analyzeLoan({ amount: 100000, annualRate: 12, months: 12, processingFee: 2000 });
+check('GST = 360', approx(f.gstOnFee, 360));
+check('Received = 97640', approx(f.moneyReceived, 97640));
+check('Fees raise effective rate', f.effectiveAnnualRate > r.effectiveAnnualRate);
 
-  const requiredFields = [
-    "emi",
-    "totalInterest",
-    "fees",
-    "gstAmount",
-    "hiddenExtra",
-    "totalPaid",
-    "moneyReceived",
-    "effectiveRatePercent",
-    "annualizationMethod",
-    "assumptions",
-    "moneyLeft",
-    "emiShareOfLeftPercent",
-    "verdict",
-    "reasons"
-  ];
+const flat = analyzeLoan({ amount: 100000, annualRate: 10, months: 12, rateType: 'flat' });
+check('Flat 10%: interest 10000', approx(flat.totalInterest, 10000));
+check('Flat effective > 10%', flat.effectiveAnnualRate > 17);
 
-  const missing = requiredFields.filter(
-    field => !(field in result)
-  );
+check('Invalid input handled', analyzeLoan({ amount: 0, months: 0 }).ok === false);
 
-  if (missing.length === 0) {
-    console.log("PASS: All required result fields exist.");
-  } else {
-    console.error("FAIL: Missing fields:", missing);
-  }
+const s = checkScamRisk('URGENT! Pay processing fee now and share OTP to get your loan: bit.ly/abc');
+check('Scam message is High risk', s.level === 'High');
 
-  console.log("Verdict:", result.verdict);
-  console.log("EMI:", result.emi);
-  console.log("Effective rate:", result.effectiveRatePercent);
-
-} catch (error) {
-  console.error("CALCULATION FAILED:", error.message);
-}
+console.log(failed ? `\n${failed} FAILED` : '\nAll tests passed');
