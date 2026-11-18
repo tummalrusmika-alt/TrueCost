@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import { extractTerms, explain } from '../api/ai.js';
 import {
   analyzeLoan,
   checkAffordability,
@@ -28,6 +29,21 @@ const SAMPLE_SCAM =
 const DEMO_OFFER =
   'Personal loan of Rs 5,00,000 at 12% annual interest for 36 months. Processing fee Rs 2,500 plus 18% GST and other charges Rs 500.';
 
+// Convert the rule-based risk level into a simple risk score.
+function getRiskScore(level, flags = []) {
+  const count = flags.length;
+
+  if (level === 'High') {
+    return Math.min(100, 80 + count * 5);
+  }
+
+  if (level === 'Medium') {
+    return Math.min(79, 40 + count * 10);
+  }
+
+  return Math.min(39, count * 10);
+}
+
 export default function TrueCost({ mode = 'all' }) {
   const [form, setForm] = useState(emptyForm);
   const [pasteText, setPasteText] = useState('');
@@ -38,6 +54,11 @@ export default function TrueCost({ mode = 'all' }) {
   const [afford, setAfford] = useState(null);
   const [scamText, setScamText] = useState('');
   const [scam, setScam] = useState(null);
+
+  const [aiExplanation, setAiExplanation] = useState('');
+  const [scamExplanation, setScamExplanation] = useState('');
+  const [aiStatus, setAiStatus] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
 
   const setField = (key) => (event) => {
     setForm((previous) => ({
@@ -66,60 +87,206 @@ export default function TrueCost({ mode = 'all' }) {
 
     setResult(null);
     setAfford(null);
+    setAiExplanation('');
+    setAiStatus('');
   };
 
-  const handleExtract = () => {
-    const found = extractTermsFromText(pasteText);
-    const filled = Object.entries(found).filter(
-      ([, value]) => value !== ''
-    ).length;
+  // AI extraction with local extraction fallback.
+  const handleExtract = async () => {
+    if (!pasteText.trim()) {
+      setPasteMsg('Paste a loan offer first.');
+      return;
+    }
 
-    setForm((previous) => ({
-      ...previous,
-      amount:
-        found.amount !== '' ? String(found.amount) : previous.amount,
-      annualRate:
-        found.annualRate !== ''
-          ? String(found.annualRate)
-          : previous.annualRate,
-      months:
-        found.months !== '' ? String(found.months) : previous.months,
-      processingFee:
-        found.processingFee !== ''
-          ? String(found.processingFee)
-          : previous.processingFee,
-      rateType: found.rateType || previous.rateType,
-    }));
+    setAiLoading(true);
+    setAiStatus('AI is reading the offer...');
+    setAiExplanation('');
 
-    setPasteMsg(
-      filled > 1
-        ? 'Terms filled in. Please check them below.'
-        : 'Could not find many terms. Please fill the form manually.'
-    );
-  };
+    try {
+      const aiFound = await extractTerms(pasteText);
+      const fallback = extractTermsFromText(pasteText);
 
-  const handleCalculate = () => {
-    const loan = analyzeLoan(form);
-    setResult(loan);
+      const updates = {
+        amount: aiFound?.error
+          ? fallback.amount
+          : (aiFound.amount ?? fallback.amount),
 
-    if (loan.ok && income !== '' && expenses !== '') {
-      setAfford(
-        checkAffordability({
-          income,
-          expenses,
-          emi: loan.emi,
-          effectiveAnnualRate: loan.effectiveAnnualRate,
-          hiddenExtra: loan.hiddenExtra,
-          amount: loan.principal,
-        })
+        annualRate: aiFound?.error
+          ? fallback.annualRate
+          : (aiFound.annualRatePercent ?? fallback.annualRate),
+
+        months: aiFound?.error
+          ? fallback.months
+          : (aiFound.tenureMonths ?? fallback.months),
+
+        processingFee: aiFound?.error
+          ? fallback.processingFee
+          : (aiFound.processingFee ?? fallback.processingFee),
+
+        gstPct: aiFound?.error
+          ? '18'
+          : (aiFound.gstOnFeesPercent ?? '18'),
+
+        otherCharges: aiFound?.error
+          ? ''
+          : (aiFound.otherCharges ?? ''),
+
+        rateType: fallback.rateType || 'reducing',
+      };
+
+      setForm((previous) => ({
+        ...previous,
+        ...Object.fromEntries(
+          Object.entries(updates).map(([key, value]) => [
+            key,
+            value === '' || value === null || value === undefined
+              ? previous[key]
+              : String(value),
+          ])
+        ),
+      }));
+
+      const worked = !aiFound?.error;
+
+      setPasteMsg(
+        worked
+          ? 'AI extracted the available terms. Please verify every value before calculating.'
+          : 'AI was unavailable. Basic text extraction was used where possible. Please check the fields.'
       );
-    } else {
-      setAfford(null);
+
+      setAiStatus(
+        worked
+          ? 'AI extraction completed.'
+          : 'AI unavailable — local extraction used.'
+      );
+    } catch (error) {
+      const fallback = extractTermsFromText(pasteText);
+
+      setForm((previous) => ({
+        ...previous,
+        amount: fallback.amount !== ''
+          ? String(fallback.amount)
+          : previous.amount,
+        annualRate: fallback.annualRate !== ''
+          ? String(fallback.annualRate)
+          : previous.annualRate,
+        months: fallback.months !== ''
+          ? String(fallback.months)
+          : previous.months,
+        processingFee: fallback.processingFee !== ''
+          ? String(fallback.processingFee)
+          : previous.processingFee,
+        rateType: fallback.rateType || previous.rateType,
+      }));
+
+      setPasteMsg(
+        'AI could not read the offer. Local extraction was tried; please check or enter details manually.'
+      );
+
+      setAiStatus('AI unavailable — local extraction used.');
+    } finally {
+      setAiLoading(false);
     }
   };
 
+  // Code calculates the loan. AI only explains the result.
+  const handleCalculate = async () => {
+    const loan = analyzeLoan(form);
+
+    setResult(loan);
+    setAiExplanation('');
+
+    if (!loan.ok) {
+      setAfford(null);
+      return;
+    }
+
+    if (income === '' || expenses === '') {
+      setAfford(null);
+      setAiStatus(
+        'Enter monthly income and expenses to get an affordability verdict.'
+      );
+      return;
+    }
+
+    const affordability = checkAffordability({
+      income,
+      expenses,
+      emi: loan.emi,
+      effectiveAnnualRate: loan.effectiveAnnualRate,
+      hiddenExtra: loan.hiddenExtra,
+      amount: loan.principal,
+    });
+
+    setAfford(affordability);
+
+    if (!affordability.ok) {
+      return;
+    }
+
+    const explanationInput = {
+      verdict: affordability.verdict,
+      reasons: affordability.reasons,
+      assumptions: loan.assumptions,
+      emi: loan.emi,
+      totalInterest: loan.totalInterest,
+      fees: loan.processingFee,
+      gstAmount: loan.gstOnFee,
+      hiddenExtra: loan.hiddenExtra,
+      totalPaid: loan.totalPaid,
+      moneyReceived: loan.moneyReceived,
+      effectiveRatePercent: loan.effectiveAnnualRate,
+      moneyLeft: affordability.moneyLeft,
+      emiShareOfLeftPercent: affordability.emiShare,
+    };
+
+    setAiLoading(true);
+    setAiStatus('AI is preparing your explanation...');
+
+    try {
+      const response = await explain(explanationInput, 'en');
+
+      if (response?.text) {
+        setAiExplanation(response.text);
+        setAiStatus('AI explanation ready.');
+      } else {
+        setAiStatus(
+          'AI explanation unavailable. Your code-calculated result is still shown.'
+        );
+      }
+    } catch (error) {
+      setAiStatus(
+        'AI explanation unavailable. Your code-calculated result is still shown.'
+      );
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  // Rule-based scam detection.
   const handleScam = () => {
-    setScam(checkScamRisk(scamText));
+    if (!scamText.trim()) {
+      setScam({
+        ok: false,
+        errors: ['Paste a message first.'],
+      });
+      return;
+    }
+
+    try {
+      const scamResult = checkScamRisk(scamText);
+
+      setScam(scamResult);
+      setScamExplanation('');
+      setAiStatus('Rule-based scam detection completed.');
+    } catch (error) {
+      console.error('Scam detection error:', error);
+
+      setScam({
+        ok: false,
+        errors: ['Unable to check this message. Please try again.'],
+      });
+    }
   };
 
   const reset = () => {
@@ -130,13 +297,26 @@ export default function TrueCost({ mode = 'all' }) {
     setExpenses('');
     setResult(null);
     setAfford(null);
+    setAiExplanation('');
+    setScamExplanation('');
+    setScamText('');
+    setScam(null);
+    setAiStatus('');
   };
+
+  const riskScore = scam?.ok
+    ? getRiskScore(scam.level, scam.flags)
+    : 0;
 
   return (
     <div className="tc">
       <header className="tc-header">
         <h1>TrueCost</h1>
         <p>Know your money, then check any offer against it.</p>
+
+        {aiStatus && (
+          <p className="tc-note">{aiStatus}</p>
+        )}
       </header>
 
       {/* LOAN CALCULATOR */}
@@ -152,16 +332,19 @@ export default function TrueCost({ mode = 'all' }) {
             <textarea
               rows={3}
               value={pasteText}
-              onChange={(event) => setPasteText(event.target.value)}
-              placeholder="Paste an EMI / loan / BNPL offer message here"
+              onChange={(event) => {
+                setPasteText(event.target.value);
+                setPasteMsg('');
+              }}
             />
 
             <div className="tc-row">
               <button
                 className="tc-btn secondary"
                 onClick={handleExtract}
+                disabled={aiLoading}
               >
-                Fill form from text
+                {aiLoading ? 'Please wait...' : 'AI: Fill form from text'}
               </button>
 
               <button
@@ -179,7 +362,9 @@ export default function TrueCost({ mode = 'all' }) {
               </button>
             </div>
 
-            {pasteMsg && <p className="tc-note">{pasteMsg}</p>}
+            {pasteMsg && (
+              <p className="tc-note">{pasteMsg}</p>
+            )}
 
             <div className="tc-grid">
               <Field label="Loan / purchase amount (₹)">
@@ -273,11 +458,18 @@ export default function TrueCost({ mode = 'all' }) {
             </div>
 
             <div className="tc-row">
-              <button className="tc-btn" onClick={handleCalculate}>
+              <button
+                className="tc-btn"
+                onClick={handleCalculate}
+                disabled={aiLoading}
+              >
                 Calculate true cost
               </button>
 
-              <button className="tc-btn link" onClick={reset}>
+              <button
+                className="tc-btn link"
+                onClick={reset}
+              >
                 Clear
               </button>
             </div>
@@ -308,6 +500,7 @@ export default function TrueCost({ mode = 'all' }) {
               <p>
                 Money left each month:{' '}
                 <strong>{rupees(afford.moneyLeft)}</strong>
+
                 {afford.emiShare !== null && (
                   <>
                     {' '}· EMI takes{' '}
@@ -321,6 +514,18 @@ export default function TrueCost({ mode = 'all' }) {
                   <li key={index}>{reason}</li>
                 ))}
               </ul>
+            </section>
+          )}
+
+          {aiExplanation && (
+            <section className="tc-card">
+              <h2>AI explanation</h2>
+              <p>{aiExplanation}</p>
+
+              <p className="tc-small">
+                The calculator performs the financial calculations.
+                AI only explains the result.
+              </p>
             </section>
           )}
 
@@ -342,9 +547,7 @@ export default function TrueCost({ mode = 'all' }) {
 
                   <div>
                     <span>Effective rate</span>
-                    <strong>
-                      {result.effectiveAnnualRate.toFixed(1)}%
-                    </strong>
+                    <strong>{result.effectiveAnnualRate.toFixed(1)}%</strong>
                   </div>
 
                   <div>
@@ -399,6 +602,7 @@ export default function TrueCost({ mode = 'all' }) {
 
               <section className="tc-card">
                 <h2>Assumptions</h2>
+
                 <ul className="tc-small">
                   {result.assumptions.map((assumption, index) => (
                     <li key={index}>{assumption}</li>
@@ -424,7 +628,11 @@ export default function TrueCost({ mode = 'all' }) {
           <textarea
             rows={4}
             value={scamText}
-            onChange={(event) => setScamText(event.target.value)}
+            onChange={(event) => {
+              setScamText(event.target.value);
+              setScam(null);
+              setScamExplanation('');
+            }}
             placeholder="Paste a loan SMS / WhatsApp message here"
           />
 
@@ -441,6 +649,7 @@ export default function TrueCost({ mode = 'all' }) {
               onClick={() => {
                 setScamText(SAMPLE_SCAM);
                 setScam(null);
+                setScamExplanation('');
               }}
             >
               Use sample scam message
@@ -457,17 +666,63 @@ export default function TrueCost({ mode = 'all' }) {
             <div className={`tc-risk ${scam.level.toLowerCase()}`}>
               <h3>Risk level: {scam.level}</h3>
 
-              {scam.flags.length > 0 ? (
+              {/* Risk score */}
+              <div className="tc-risk-score">
+                <div className="tc-risk-score-heading">
+                  <strong>Scam Risk Score</strong>
+                  <strong>{riskScore}/100</strong>
+                </div>
+
+                <div
+                  className="tc-risk-track"
+                  role="progressbar"
+                  aria-valuenow={riskScore}
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  aria-label="Scam risk score"
+                >
+                  <div
+                    className={`tc-risk-fill ${scam.level.toLowerCase()}`}
+                    style={{ width: `${riskScore}%` }}
+                  />
+                </div>
+
+                <p className="tc-small">
+                  {riskScore >= 80
+                    ? 'Several serious warning signs were detected.'
+                    : riskScore >= 40
+                      ? 'Some warning signs were detected. Verify carefully.'
+                      : 'Few common warning signs were detected. Stay alert.'}
+                </p>
+              </div>
+
+              <h4>Why was this message flagged?</h4>
+
+              {scam.flags?.length > 0 ? (
                 <ul>
                   {scam.flags.map((flag, index) => (
                     <li key={index}>{flag}</li>
                   ))}
                 </ul>
               ) : (
-                <p>No common scam signs found, but stay careful.</p>
+                <p>
+                  No common scam signs found, but stay careful.
+                </p>
               )}
 
               <p className="tc-small">{scam.note}</p>
+
+              {scamExplanation && (
+                <div className="tc-ai-explanation">
+                  <strong>AI explanation</strong>
+                  <p>{scamExplanation}</p>
+                </div>
+              )}
+
+              <p className="tc-small">
+                This is a rule-based screening score, not a guarantee
+                that a message is safe or fraudulent.
+              </p>
             </div>
           )}
         </section>

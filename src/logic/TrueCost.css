@@ -339,3 +339,44 @@
     font-size: 13px;
   }
 }
+
+/* TrueCost scam risk score */
+
+.tc-risk-score {
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+.tc-risk-score-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  gap: 12px;
+}
+
+.tc-risk-track {
+  width: 100%;
+  height: 12px;
+  background: #e5e7eb;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.tc-risk-fill {
+  height: 100%;
+  border-radius: 20px;
+  transition: width 0.4s ease;
+}
+
+.tc-risk-fill.high {
+  background: #dc4444;
+}
+
+.tc-risk-fill.medium {
+  background: #e5a329;
+}
+
+.tc-risk-fill.low {
+  background: #269b69;
+}
