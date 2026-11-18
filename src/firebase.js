@@ -57,7 +57,7 @@ const ai = getAI(app, {
 });
 
 const model = getGenerativeModel(ai, {
-  model: "gemini-3.5-flash"
+  model: "gemini-3.8-flash"
 });
 
 export { app, appCheck, ai, model };
