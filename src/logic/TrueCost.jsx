@@ -3,7 +3,6 @@ import {
   extractTerms,
   explain,
   explainScam,
-  extractTextFromImage,
 } from '../api/ai.js';
 import { checkScamRules } from './scamRules.js';
 import {
@@ -90,9 +89,6 @@ export default function TrueCost({ mode = 'all' }) {
   const [voiceMsg, setVoiceMsg] = useState('');
   const [wasRedacted, setWasRedacted] = useState(false);
   const [stopMic, setStopMic] = useState(null);
-  const [imageBusy, setImageBusy] = useState(false);
-  const [imageMsg, setImageMsg] = useState('');
-  const fileInput = useRef(null);
 
   // The language of everything shown on the scam result. It follows the dropdown live.
   const shownLang = resolveLanguage(language, scamText);
@@ -369,44 +365,6 @@ export default function TrueCost({ mode = 'all' }) {
       const lang = resolveLanguage(value, scamText);
       setAiStatus(UI[lang].ruleDone);
       fetchScamExplanation(lang, scamText);
-    }
-  };
-
-  // Read the message from a screenshot.
-  const handleImage = async (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = ''; // allow choosing the same file again
-
-    if (!file) return;
-
-    const t = UI[resolveLanguage(language, scamText)];
-
-    setImageMsg(t.readingImage);
-    setImageBusy(true);
-    setScam(null);
-    setScamExplanation('');
-
-    try {
-      const response = await extractTextFromImage(file);
-
-      if (response?.text) {
-        setScamText(response.text);
-        setImageMsg(t.imageRead);
-      } else if (response?.code === 'empty') {
-        setImageMsg(t.imageNoText);
-      } else if (response?.code === 'type') {
-        setImageMsg(t.imageBadType);
-      } else if (response?.code === 'size') {
-        setImageMsg(t.imageTooBig);
-      } else if (/limit|busy|unavailable|too long/i.test(response?.message || '')) {
-        setImageMsg(t.imageBusy);
-      } else {
-        setImageMsg(t.imageFailed);
-      }
-    } catch {
-      setImageMsg(t.imageFailed);
-    } finally {
-      setImageBusy(false);
     }
   };
 
@@ -851,24 +809,6 @@ export default function TrueCost({ mode = 'all' }) {
               {UI[resolveLanguage(language, scamText)].sampleButton}
             </button>
 
-            <button
-              className="tc-btn link"
-              onClick={() => fileInput.current?.click()}
-              disabled={imageBusy || scamBusy}
-            >
-              {imageBusy
-                ? UI[resolveLanguage(language, scamText)].readingImage
-                : UI[resolveLanguage(language, scamText)].uploadButton}
-            </button>
-
-            <input
-              ref={fileInput}
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              onChange={handleImage}
-              hidden
-            />
-
             {canListen() && (
               <button
                 className={`tc-btn link tc-mic ${listening ? 'on' : ''}`}
@@ -880,12 +820,6 @@ export default function TrueCost({ mode = 'all' }) {
               </button>
             )}
           </div>
-
-          {imageMsg && (
-            <p className="tc-small">
-              {imageMsg} {UI[resolveLanguage(language, scamText)].imageNote}
-            </p>
-          )}
 
           {(listening || voiceMsg) && (
             <p className="tc-small">

@@ -1,6 +1,5 @@
 import { model } from "../firebase.js";
 import { translateFlag } from "../logic/translations.js";
-import { prepareImage } from "../logic/image.js";
 
 // ==================================================
 // CONFIGURATION
