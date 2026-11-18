@@ -1,5 +1,10 @@
-import { useState } from 'react';
-import { extractTerms, explain, explainScam } from '../api/ai.js';
+import { useRef, useState } from 'react';
+import {
+  extractTerms,
+  explain,
+  explainScam,
+  extractTextFromImage,
+} from '../api/ai.js';
 import { checkScamRules } from './scamRules.js';
 import {
   LANGUAGE_OPTIONS,
@@ -77,7 +82,7 @@ export default function TrueCost({ mode = 'all' }) {
 
   // 'auto' detects Telugu / Hindi from what the user typed.
   const [language, setLanguage] = useState('auto');
-  const [scamLang, setScamLang] = useState('en');
+  const requestId = useRef(0);
   const [scamSource, setScamSource] = useState('');
   const [scamBusy, setScamBusy] = useState(false);
   const [listening, setListening] = useState(false);
@@ -85,6 +90,12 @@ export default function TrueCost({ mode = 'all' }) {
   const [voiceMsg, setVoiceMsg] = useState('');
   const [wasRedacted, setWasRedacted] = useState(false);
   const [stopMic, setStopMic] = useState(null);
+  const [imageBusy, setImageBusy] = useState(false);
+  const [imageMsg, setImageMsg] = useState('');
+  const fileInput = useRef(null);
+
+  // The language of everything shown on the scam result. It follows the dropdown live.
+  const shownLang = resolveLanguage(language, scamText);
 
   const setField = (key) => (event) => {
     setForm((previous) => ({
@@ -292,9 +303,43 @@ export default function TrueCost({ mode = 'all' }) {
     }
   };
 
-  // Rule-based scam detection first, then an explanation in the user's language.
+  // Asks the AI for an explanation in the given language.
+  // Falls back to a rule-based explanation in the same language.
+  const fetchScamExplanation = async (lang, text) => {
+    const id = ++requestId.current;
+    const t = UI[lang];
+
+    setScamExplanation('');
+    setScamSource('');
+    setScamBusy(true);
+
+    try {
+      // Same rules, in the format explainScam expects.
+      const ruleResult = checkScamRules(text);
+      // Sensitive numbers are hidden before anything is sent to the AI.
+      const safe = redactSensitive(text);
+      setWasRedacted(safe.changed);
+
+      const response = await explainScam(safe.text, ruleResult, lang);
+
+      // Ignore this answer if the user changed the language meanwhile.
+      if (id !== requestId.current) return;
+
+      if (response?.text) {
+        setScamExplanation(response.text);
+        setScamSource(response.fallback ? 'rule-based' : 'google-ai');
+        setAiStatus(response.fallback ? t.aiFallback : t.aiDone);
+      }
+    } catch (error) {
+      console.error('Scam explanation error:', error);
+    } finally {
+      if (id === requestId.current) setScamBusy(false);
+    }
+  };
+
+  // Rule-based scam detection first, then an explanation in the chosen language.
   const handleScam = async () => {
-    const lang = resolveLanguage(language, scamText);
+    const lang = shownLang;
     const t = UI[lang];
 
     if (!scamText.trim()) {
@@ -310,30 +355,58 @@ export default function TrueCost({ mode = 'all' }) {
     }
 
     setScam(scamResult);
-    setScamLang(lang);
-    setScamExplanation('');
-    setScamSource('');
     setAiStatus(t.ruleDone);
-    setScamBusy(true);
+
+    await fetchScamExplanation(lang, scamText);
+  };
+
+  // Changing the language also updates a result that is already on screen.
+  const handleLanguageChange = (event) => {
+    const value = event.target.value;
+    setLanguage(value);
+
+    if (scam?.ok) {
+      const lang = resolveLanguage(value, scamText);
+      setAiStatus(UI[lang].ruleDone);
+      fetchScamExplanation(lang, scamText);
+    }
+  };
+
+  // Read the message from a screenshot.
+  const handleImage = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = ''; // allow choosing the same file again
+
+    if (!file) return;
+
+    const t = UI[resolveLanguage(language, scamText)];
+
+    setImageMsg(t.readingImage);
+    setImageBusy(true);
+    setScam(null);
+    setScamExplanation('');
 
     try {
-      // Same rules, in the format explainScam expects.
-      const ruleResult = checkScamRules(scamText);
-      // Sensitive numbers are hidden before anything is sent to the AI.
-      const safe = redactSensitive(scamText);
-      setWasRedacted(safe.changed);
-
-      const response = await explainScam(safe.text, ruleResult, lang);
+      const response = await extractTextFromImage(file);
 
       if (response?.text) {
-        setScamExplanation(response.text);
-        setScamSource(response.fallback ? 'rule-based' : 'google-ai');
-        setAiStatus(response.fallback ? t.aiFallback : t.aiDone);
+        setScamText(response.text);
+        setImageMsg(t.imageRead);
+      } else if (response?.code === 'empty') {
+        setImageMsg(t.imageNoText);
+      } else if (response?.code === 'type') {
+        setImageMsg(t.imageBadType);
+      } else if (response?.code === 'size') {
+        setImageMsg(t.imageTooBig);
+      } else if (/limit|busy|unavailable|too long/i.test(response?.message || '')) {
+        setImageMsg(t.imageBusy);
+      } else {
+        setImageMsg(t.imageFailed);
       }
-    } catch (error) {
-      console.error('Scam explanation error:', error);
+    } catch {
+      setImageMsg(t.imageFailed);
     } finally {
-      setScamBusy(false);
+      setImageBusy(false);
     }
   };
 
@@ -377,15 +450,15 @@ export default function TrueCost({ mode = 'all' }) {
 
     if (!scam?.ok) return;
 
-    const t = UI[scamLang];
+    const t = UI[shownLang];
     const parts = [
       `${t.riskLevel}: ${t.levels[scam.level]}.`,
-      ...(scam.flags || []).map((flag) => translateFlag(flag, scamLang)),
+      ...(scam.flags || []).map((flag) => translateFlag(flag, shownLang)),
       scamExplanation,
     ].filter(Boolean);
 
     setSpeaking(true);
-    speak(parts.join(' '), scamLang, { onEnd: () => setSpeaking(false) });
+    speak(parts.join(' '), shownLang, { onEnd: () => setSpeaking(false) });
   };
 
   const reset = () => {
@@ -420,7 +493,7 @@ export default function TrueCost({ mode = 'all' }) {
           {UI[resolveLanguage(language, scamText || pasteText)].languageLabel}:{' '}
           <select
             value={language}
-            onChange={(event) => setLanguage(event.target.value)}
+            onChange={handleLanguageChange}
           >
             {LANGUAGE_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -778,6 +851,24 @@ export default function TrueCost({ mode = 'all' }) {
               {UI[resolveLanguage(language, scamText)].sampleButton}
             </button>
 
+            <button
+              className="tc-btn link"
+              onClick={() => fileInput.current?.click()}
+              disabled={imageBusy || scamBusy}
+            >
+              {imageBusy
+                ? UI[resolveLanguage(language, scamText)].readingImage
+                : UI[resolveLanguage(language, scamText)].uploadButton}
+            </button>
+
+            <input
+              ref={fileInput}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={handleImage}
+              hidden
+            />
+
             {canListen() && (
               <button
                 className={`tc-btn link tc-mic ${listening ? 'on' : ''}`}
@@ -789,6 +880,12 @@ export default function TrueCost({ mode = 'all' }) {
               </button>
             )}
           </div>
+
+          {imageMsg && (
+            <p className="tc-small">
+              {imageMsg} {UI[resolveLanguage(language, scamText)].imageNote}
+            </p>
+          )}
 
           {(listening || voiceMsg) && (
             <p className="tc-small">
@@ -803,7 +900,7 @@ export default function TrueCost({ mode = 'all' }) {
           )}
 
           {scam && scam.ok && (() => {
-            const t = UI[scamLang];
+            const t = UI[shownLang];
             const levelClass = scam.level.toLowerCase();
 
             return (
@@ -847,7 +944,7 @@ export default function TrueCost({ mode = 'all' }) {
                 {scam.flags?.length > 0 ? (
                   <ul>
                     {scam.flags.map((flag, index) => (
-                      <li key={index}>{translateFlag(flag, scamLang)}</li>
+                      <li key={index}>{translateFlag(flag, shownLang)}</li>
                     ))}
                   </ul>
                 ) : (
@@ -857,7 +954,7 @@ export default function TrueCost({ mode = 'all' }) {
                 <h4>{t.nextStepsTitle}</h4>
 
                 <ul>
-                  {getNextSteps(scam.level, scamLang).map((step, index) => (
+                  {getNextSteps(scam.level, shownLang).map((step, index) => (
                     <li key={index}>{step}</li>
                   ))}
                 </ul>
