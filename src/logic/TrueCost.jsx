@@ -1,6 +1,13 @@
-
 import { useState } from 'react';
-import { extractTerms, explain } from '../api/ai.js';
+import { extractTerms, explain, explainScam } from '../api/ai.js';
+import { checkScamRules } from './scamRules.js';
+import {
+  LANGUAGE_OPTIONS,
+  UI,
+  resolveLanguage,
+  translateFlag,
+  getNextSteps,
+} from './translations.js';
 import {
   analyzeLoan,
   checkAffordability,
@@ -59,6 +66,12 @@ export default function TrueCost({ mode = 'all' }) {
   const [scamExplanation, setScamExplanation] = useState('');
   const [aiStatus, setAiStatus] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
+
+  // 'auto' detects Telugu / Hindi from what the user typed.
+  const [language, setLanguage] = useState('auto');
+  const [scamLang, setScamLang] = useState('en');
+  const [scamSource, setScamSource] = useState('');
+  const [scamBusy, setScamBusy] = useState(false);
 
   const setField = (key) => (event) => {
     setForm((previous) => ({
@@ -244,7 +257,10 @@ export default function TrueCost({ mode = 'all' }) {
     setAiStatus('AI is preparing your explanation...');
 
     try {
-      const response = await explain(explanationInput, 'en');
+      const response = await explain(
+        explanationInput,
+        resolveLanguage(language, pasteText)
+      );
 
       if (response?.text) {
         setAiExplanation(response.text);
@@ -263,29 +279,44 @@ export default function TrueCost({ mode = 'all' }) {
     }
   };
 
-  // Rule-based scam detection.
-  const handleScam = () => {
+  // Rule-based scam detection first, then an explanation in the user's language.
+  const handleScam = async () => {
+    const lang = resolveLanguage(language, scamText);
+    const t = UI[lang];
+
     if (!scamText.trim()) {
-      setScam({
-        ok: false,
-        errors: ['Paste a message first.'],
-      });
+      setScam({ ok: false, errors: [t.emptyMessage] });
       return;
     }
 
+    const scamResult = checkScamRisk(scamText);
+
+    if (!scamResult.ok) {
+      setScam({ ok: false, errors: [t.checkFailed] });
+      return;
+    }
+
+    setScam(scamResult);
+    setScamLang(lang);
+    setScamExplanation('');
+    setScamSource('');
+    setAiStatus(t.ruleDone);
+    setScamBusy(true);
+
     try {
-      const scamResult = checkScamRisk(scamText);
+      // Same rules, in the format explainScam expects.
+      const ruleResult = checkScamRules(scamText);
+      const response = await explainScam(scamText, ruleResult, lang);
 
-      setScam(scamResult);
-      setScamExplanation('');
-      setAiStatus('Rule-based scam detection completed.');
+      if (response?.text) {
+        setScamExplanation(response.text);
+        setScamSource(response.fallback ? 'rule-based' : 'google-ai');
+        setAiStatus(response.fallback ? t.aiFallback : t.aiDone);
+      }
     } catch (error) {
-      console.error('Scam detection error:', error);
-
-      setScam({
-        ok: false,
-        errors: ['Unable to check this message. Please try again.'],
-      });
+      console.error('Scam explanation error:', error);
+    } finally {
+      setScamBusy(false);
     }
   };
 
@@ -299,6 +330,7 @@ export default function TrueCost({ mode = 'all' }) {
     setAfford(null);
     setAiExplanation('');
     setScamExplanation('');
+    setScamSource('');
     setScamText('');
     setScam(null);
     setAiStatus('');
@@ -313,6 +345,20 @@ export default function TrueCost({ mode = 'all' }) {
       <header className="tc-header">
         <h1>TrueCost</h1>
         <p>Know your money, then check any offer against it.</p>
+
+        <label className="tc-label">
+          {UI[resolveLanguage(language, scamText || pasteText)].languageLabel}:{' '}
+          <select
+            value={language}
+            onChange={(event) => setLanguage(event.target.value)}
+          >
+            {LANGUAGE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
 
         {aiStatus && (
           <p className="tc-note">{aiStatus}</p>
@@ -623,7 +669,7 @@ export default function TrueCost({ mode = 'all' }) {
       {/* SCAM CHECKER */}
       {(mode === 'scam' || mode === 'all') && (
         <section id="scam-check" className="tc-card">
-          <h2>Check a loan message for scam signs</h2>
+          <h2>{UI[resolveLanguage(language, scamText)].scamTitle}</h2>
 
           <textarea
             rows={4}
@@ -633,15 +679,18 @@ export default function TrueCost({ mode = 'all' }) {
               setScam(null);
               setScamExplanation('');
             }}
-            placeholder="Paste a loan SMS / WhatsApp message here"
+            placeholder={UI[resolveLanguage(language, scamText)].scamPlaceholder}
           />
 
           <div className="tc-row">
             <button
               className="tc-btn secondary"
               onClick={handleScam}
+              disabled={scamBusy}
             >
-              Check message
+              {scamBusy
+                ? UI[resolveLanguage(language, scamText)].checkingButton
+                : UI[resolveLanguage(language, scamText)].checkButton}
             </button>
 
             <button
@@ -652,79 +701,93 @@ export default function TrueCost({ mode = 'all' }) {
                 setScamExplanation('');
               }}
             >
-              Use sample scam message
+              {UI[resolveLanguage(language, scamText)].sampleButton}
             </button>
           </div>
 
           {scam && !scam.ok && (
             <p className="tc-warn">
-              {scam.errors?.[0] || 'Could not check this message.'}
+              {scam.errors?.[0] || UI[resolveLanguage(language, scamText)].checkFailed}
             </p>
           )}
 
-          {scam && scam.ok && (
-            <div className={`tc-risk ${scam.level.toLowerCase()}`}>
-              <h3>Risk level: {scam.level}</h3>
+          {scam && scam.ok && (() => {
+            const t = UI[scamLang];
+            const levelClass = scam.level.toLowerCase();
 
-              {/* Risk score */}
-              <div className="tc-risk-score">
-                <div className="tc-risk-score-heading">
-                  <strong>Scam Risk Score</strong>
-                  <strong>{riskScore}/100</strong>
-                </div>
+            return (
+              <div className={`tc-risk ${levelClass}`}>
+                <h3>
+                  {t.riskLevel}: {t.levels[scam.level]}
+                </h3>
 
-                <div
-                  className="tc-risk-track"
-                  role="progressbar"
-                  aria-valuenow={riskScore}
-                  aria-valuemin="0"
-                  aria-valuemax="100"
-                  aria-label="Scam risk score"
-                >
+                {/* Risk score */}
+                <div className="tc-risk-score">
+                  <div className="tc-risk-score-heading">
+                    <strong>{t.scoreTitle}</strong>
+                    <strong>{riskScore}/100</strong>
+                  </div>
+
                   <div
-                    className={`tc-risk-fill ${scam.level.toLowerCase()}`}
-                    style={{ width: `${riskScore}%` }}
-                  />
+                    className="tc-risk-track"
+                    role="progressbar"
+                    aria-valuenow={riskScore}
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-label={t.scoreTitle}
+                  >
+                    <div
+                      className={`tc-risk-fill ${levelClass}`}
+                      style={{ width: `${riskScore}%` }}
+                    />
+                  </div>
+
+                  <p className="tc-small">
+                    {riskScore >= 80
+                      ? t.scoreHigh
+                      : riskScore >= 40
+                        ? t.scoreMedium
+                        : t.scoreLow}
+                  </p>
                 </div>
 
-                <p className="tc-small">
-                  {riskScore >= 80
-                    ? 'Several serious warning signs were detected.'
-                    : riskScore >= 40
-                      ? 'Some warning signs were detected. Verify carefully.'
-                      : 'Few common warning signs were detected. Stay alert.'}
-                </p>
-              </div>
+                <h4>{t.whyFlagged}</h4>
 
-              <h4>Why was this message flagged?</h4>
+                {scam.flags?.length > 0 ? (
+                  <ul>
+                    {scam.flags.map((flag, index) => (
+                      <li key={index}>{translateFlag(flag, scamLang)}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>{t.noFlags}</p>
+                )}
 
-              {scam.flags?.length > 0 ? (
+                <h4>{t.nextStepsTitle}</h4>
+
                 <ul>
-                  {scam.flags.map((flag, index) => (
-                    <li key={index}>{flag}</li>
+                  {getNextSteps(scam.level, scamLang).map((step, index) => (
+                    <li key={index}>{step}</li>
                   ))}
                 </ul>
-              ) : (
-                <p>
-                  No common scam signs found, but stay careful.
-                </p>
-              )}
 
-              <p className="tc-small">{scam.note}</p>
+                {scamBusy && <p className="tc-small">{t.aiLoading}</p>}
 
-              {scamExplanation && (
-                <div className="tc-ai-explanation">
-                  <strong>AI explanation</strong>
-                  <p>{scamExplanation}</p>
-                </div>
-              )}
+                {scamExplanation && (
+                  <div className="tc-ai-explanation">
+                    <strong>
+                      {scamSource === 'rule-based'
+                        ? t.ruleExplanation
+                        : t.aiExplanation}
+                    </strong>
+                    <p>{scamExplanation}</p>
+                  </div>
+                )}
 
-              <p className="tc-small">
-                This is a rule-based screening score, not a guarantee
-                that a message is safe or fraudulent.
-              </p>
-            </div>
-          )}
+                <p className="tc-small">{t.footerNote}</p>
+              </div>
+            );
+          })()}
         </section>
       )}
 
