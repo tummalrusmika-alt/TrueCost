@@ -487,14 +487,6 @@ export default function TrueCost({ mode = 'all' }) {
 
             <div className="tc-row">
               <button
-                className="tc-btn secondary"
-                onClick={handleExtract}
-                disabled={aiLoading}
-              >
-                {aiLoading ? 'Please wait...' : 'AI: Fill form from text'}
-              </button>
-
-              <button
                 className="tc-btn link"
                 onClick={() => setPasteText(SAMPLE_OFFER)}
               >
