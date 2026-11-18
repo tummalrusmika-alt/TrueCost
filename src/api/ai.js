@@ -1,4 +1,5 @@
 import { model } from "../firebase.js";
+import { translateFlag } from "../logic/translations.js";
 
 // ==================================================
 // CONFIGURATION
@@ -346,35 +347,6 @@ function createScamFallback(ruleResult, language) {
     }
   };
 
-  const flagTranslations = {
-    en: {
-      fee: "Asks for a fee or payment before the loan is given.",
-      sensitive: "Mentions sensitive information such as OTP, PIN or banking credentials. Never share these details.",
-      urgency: "Creates urgency or pressures the user to act quickly.",
-      link: "Contains a suspicious shortened link. Avoid opening unknown links.",
-      bank: "Claims to represent a bank. Verify the sender through official bank channels.",
-      approval: "Makes loan approval claims that need independent verification."
-    },
-
-    te: {
-      fee: "రుణం ఇవ్వడానికి ముందు రుసుము లేదా చెల్లింపు అడుగుతోంది.",
-      sensitive: "OTP, PIN లేదా బ్యాంకింగ్ రహస్య వివరాలను అడుగుతోంది. ఈ వివరాలను ఎప్పుడూ పంచుకోవద్దు.",
-      urgency: "త్వరగా చర్య తీసుకోవాలని ఒత్తిడి చేస్తోంది.",
-      link: "అనుమానాస్పదంగా కుదించిన లింక్ ఉంది. తెలియని లింక్‌లను తెరవవద్దు.",
-      bank: "బ్యాంకు ప్రతినిధిగా చెప్పుకుంటోంది. అధికారిక బ్యాంక్ మార్గాల ద్వారా పంపినవారిని ధృవీకరించండి.",
-      approval: "రుణ ఆమోదం గురించి చేసిన వాదనలను స్వతంత్రంగా ధృవీకరించాలి."
-    },
-
-    hi: {
-      fee: "ऋण देने से पहले शुल्क या भुगतान मांगा जा रहा है।",
-      sensitive: "OTP, PIN या बैंकिंग गोपनीय जानकारी मांगी जा रही है। ये जानकारी कभी साझा न करें।",
-      urgency: "जल्दी कार्रवाई करने का दबाव बनाया जा रहा है।",
-      link: "इसमें एक संदिग्ध छोटा लिंक है। अनजान लिंक न खोलें।",
-      bank: "बैंक का प्रतिनिधि होने का दावा किया जा रहा है। आधिकारिक बैंक माध्यमों से पुष्टि करें।",
-      approval: "ऋण स्वीकृति के दावों की स्वतंत्र रूप से पुष्टि करना आवश्यक है।"
-    }
-  };
-
   const nextStep = {
     en: "Do not pay advance fees or share OTPs, PINs, or passwords. Verify the lender through official bank channels.",
 
@@ -389,74 +361,9 @@ function createScamFallback(ruleResult, language) {
     hi: DISCLAIMERS.hi
   };
 
-  // Matches the exact warnings produced by src/logic/scamRules.js.
-  // More specific checks come first, and short words such as "pin" are
-  // matched as whole words so "opening" is not mistaken for "PIN".
-  function translateFlag(flag) {
-    const value = flag.toLowerCase();
-    const translations = flagTranslations[language];
-
-    if (
-      value.includes("represent a bank") ||
-      value.includes("financial institution") ||
-      value.includes("bank impersonation") ||
-      value.includes("pretends to be a bank") ||
-      value.includes("bank identity")
-    ) {
-      return translations.bank;
-    }
-
-    if (
-      value.includes("link") ||
-      value.includes("short url") ||
-      value.includes("bit.ly") ||
-      value.includes("tinyurl")
-    ) {
-      return translations.link;
-    }
-
-    if (
-      value.includes("approval claims") ||
-      value.includes("independent verification")
-    ) {
-      return translations.approval;
-    }
-
-    if (
-      value.includes("sensitive") ||
-      /\b(otp|pin|cvv)\b/.test(value) ||
-      value.includes("password") ||
-      value.includes("credential")
-    ) {
-      return translations.sensitive;
-    }
-
-    if (
-      value.includes("urgency") ||
-      value.includes("urgent") ||
-      value.includes("pressure") ||
-      value.includes("immediately") ||
-      value.includes("limited time")
-    ) {
-      return translations.urgency;
-    }
-
-    if (
-      /\bfee\b/.test(value) ||
-      value.includes("payment") ||
-      value.includes("processing charge") ||
-      value.includes("upfront")
-    ) {
-      return translations.fee;
-    }
-
-    // Keep an unknown warning rather than silently removing it.
-    return flag;
-  }
-
   const redFlags = ruleResult.redFlags
     .slice(0, 3)
-    .map(translateFlag);
+    .map(flag => translateFlag(flag, language));
 
   const flagsSentence = redFlags.length
     ? language === "en"

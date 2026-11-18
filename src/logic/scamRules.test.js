@@ -1,4 +1,3 @@
-
 import { test, expect } from "vitest";
 
 import { checkScamRules } from "./scamRules.js";
@@ -21,7 +20,8 @@ test("detects an upfront payment request", () => {
     "Pay the processing fee before your loan is approved."
   );
 
-  expect(result.riskLevel).toBe("Medium");
+  // An upfront fee is always treated as high risk.
+  expect(result.riskLevel).toBe("High");
   expect(result.redFlags.length).toBeGreaterThan(0);
 });
 
@@ -48,4 +48,75 @@ test("rejects non-string input", () => {
   expect(() => {
     checkScamRules(null);
   }).toThrow(/Please provide a valid message/);
+});
+
+// ---------------------------------------------------------------
+// Telugu, Hindi and Indian scam patterns
+// ---------------------------------------------------------------
+
+test("detects a Telugu message asking for a fee and OTP", () => {
+  const result = checkScamRules(
+    "మీ రుణం పొందడానికి ముందుగా 2500 రూపాయలు చెల్లించండి. మీ OTP కూడా పంపండి."
+  );
+  expect(result.riskLevel).toBe("High");
+});
+
+test("detects a Hindi message asking for a fee and OTP", () => {
+  const result = checkScamRules(
+    "लोन पाने के लिए 2500 रुपये शुल्क जमा करें और अपना ओटीपी भेजें।"
+  );
+  expect(result.riskLevel).toBe("High");
+  expect(result.redFlags.length).toBeGreaterThanOrEqual(2);
+});
+
+test("detects a Telugu message written only in Telugu script", () => {
+  const result = checkScamRules(
+    "వెంటనే మీ ఓటీపీ చెప్పండి, లేదంటే మీ ఖాతా బ్లాక్ అవుతుంది."
+  );
+  expect(result.riskLevel).toBe("High");
+});
+
+test("detects a fake KYC update message as medium risk", () => {
+  const result = checkScamRules(
+    "Your account will be blocked today. Update your KYC now."
+  );
+  expect(result.riskLevel).toBe("Medium");
+  expect(result.redFlags.some((flag) => flag.includes("KYC"))).toBe(true);
+});
+
+test("detects an APK download request", () => {
+  const result = checkScamRules(
+    "Download this app to get your instant loan: loan-helper.apk"
+  );
+  expect(result.riskLevel).toBe("High");
+  expect(result.redFlags.some((flag) => flag.includes("APK"))).toBe(true);
+});
+
+test("detects threats from loan apps", () => {
+  const result = checkScamRules(
+    "Repay today or we will send your photos to all your contacts and call the police."
+  );
+  expect(result.riskLevel).toBe("High");
+});
+
+test("detects a UPI collect request", () => {
+  const result = checkScamRules(
+    "Approve the collect request on your phone to receive your loan."
+  );
+  expect(result.riskLevel).toBe("High");
+});
+
+test("detects a request to pay money to release the loan", () => {
+  const result = checkScamRules(
+    "Your loan is ready. Pay a refundable deposit of Rs 2000 to release the loan amount."
+  );
+  expect(result.riskLevel).toBe("High");
+  expect(result.redFlags.some((flag) => flag.includes("release"))).toBe(true);
+});
+
+test("a normal Hindi bank message is not flagged as High", () => {
+  const result = checkScamRules(
+    "आपका लोन आवेदन प्राप्त हो गया है। अधिक जानकारी के लिए अपनी बैंक शाखा में जाएं।"
+  );
+  expect(result.riskLevel).toBe("Low");
 });

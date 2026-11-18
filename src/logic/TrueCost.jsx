@@ -8,6 +8,14 @@ import {
   translateFlag,
   getNextSteps,
 } from './translations.js';
+import { redactSensitive } from './privacy.js';
+import {
+  canListen,
+  canSpeak,
+  startListening,
+  speak,
+  stopSpeaking,
+} from './speech.js';
 import {
   analyzeLoan,
   checkAffordability,
@@ -72,6 +80,11 @@ export default function TrueCost({ mode = 'all' }) {
   const [scamLang, setScamLang] = useState('en');
   const [scamSource, setScamSource] = useState('');
   const [scamBusy, setScamBusy] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const [voiceMsg, setVoiceMsg] = useState('');
+  const [wasRedacted, setWasRedacted] = useState(false);
+  const [stopMic, setStopMic] = useState(null);
 
   const setField = (key) => (event) => {
     setForm((previous) => ({
@@ -116,7 +129,7 @@ export default function TrueCost({ mode = 'all' }) {
     setAiExplanation('');
 
     try {
-      const aiFound = await extractTerms(pasteText);
+      const aiFound = await extractTerms(redactSensitive(pasteText).text);
       const fallback = extractTermsFromText(pasteText);
 
       const updates = {
@@ -172,7 +185,7 @@ export default function TrueCost({ mode = 'all' }) {
           ? 'AI extraction completed.'
           : 'AI unavailable — local extraction used.'
       );
-    } catch (error) {
+    } catch {
       const fallback = extractTermsFromText(pasteText);
 
       setForm((previous) => ({
@@ -270,7 +283,7 @@ export default function TrueCost({ mode = 'all' }) {
           'AI explanation unavailable. Your code-calculated result is still shown.'
         );
       }
-    } catch (error) {
+    } catch {
       setAiStatus(
         'AI explanation unavailable. Your code-calculated result is still shown.'
       );
@@ -306,7 +319,11 @@ export default function TrueCost({ mode = 'all' }) {
     try {
       // Same rules, in the format explainScam expects.
       const ruleResult = checkScamRules(scamText);
-      const response = await explainScam(scamText, ruleResult, lang);
+      // Sensitive numbers are hidden before anything is sent to the AI.
+      const safe = redactSensitive(scamText);
+      setWasRedacted(safe.changed);
+
+      const response = await explainScam(safe.text, ruleResult, lang);
 
       if (response?.text) {
         setScamExplanation(response.text);
@@ -320,6 +337,57 @@ export default function TrueCost({ mode = 'all' }) {
     }
   };
 
+  // Speak the message instead of typing it.
+  const handleMic = () => {
+    setVoiceMsg('');
+
+    if (listening) {
+      stopMic?.();
+      setListening(false);
+      return;
+    }
+
+    if (!canListen()) {
+      setVoiceMsg('Voice input is not supported in this browser. Please use Chrome or Edge.');
+      return;
+    }
+
+    setListening(true);
+
+    const stop = startListening(resolveLanguage(language, ''), {
+      onText: (spoken) => {
+        setScamText((previous) => (previous ? `${previous} ${spoken}` : spoken));
+        setScam(null);
+        setScamExplanation('');
+      },
+      onEnd: () => setListening(false),
+      onError: (message) => setVoiceMsg(message),
+    });
+
+    setStopMic(() => stop);
+  };
+
+  // Read the result aloud in the language of the result.
+  const handleListen = () => {
+    if (speaking) {
+      stopSpeaking();
+      setSpeaking(false);
+      return;
+    }
+
+    if (!scam?.ok) return;
+
+    const t = UI[scamLang];
+    const parts = [
+      `${t.riskLevel}: ${t.levels[scam.level]}.`,
+      ...(scam.flags || []).map((flag) => translateFlag(flag, scamLang)),
+      scamExplanation,
+    ].filter(Boolean);
+
+    setSpeaking(true);
+    speak(parts.join(' '), scamLang, { onEnd: () => setSpeaking(false) });
+  };
+
   const reset = () => {
     setForm(emptyForm);
     setPasteText('');
@@ -331,6 +399,8 @@ export default function TrueCost({ mode = 'all' }) {
     setAiExplanation('');
     setScamExplanation('');
     setScamSource('');
+    stopSpeaking();
+    setSpeaking(false);
     setScamText('');
     setScam(null);
     setAiStatus('');
@@ -682,6 +752,10 @@ export default function TrueCost({ mode = 'all' }) {
             placeholder={UI[resolveLanguage(language, scamText)].scamPlaceholder}
           />
 
+          <p className="tc-small tc-privacy">
+            🔒 {UI[resolveLanguage(language, scamText)].privacyNote}
+          </p>
+
           <div className="tc-row">
             <button
               className="tc-btn secondary"
@@ -703,7 +777,24 @@ export default function TrueCost({ mode = 'all' }) {
             >
               {UI[resolveLanguage(language, scamText)].sampleButton}
             </button>
+
+            {canListen() && (
+              <button
+                className={`tc-btn link tc-mic ${listening ? 'on' : ''}`}
+                onClick={handleMic}
+              >
+                {listening
+                  ? UI[resolveLanguage(language, scamText)].listeningButton
+                  : UI[resolveLanguage(language, scamText)].speakButton}
+              </button>
+            )}
           </div>
+
+          {(listening || voiceMsg) && (
+            <p className="tc-small">
+              {voiceMsg || UI[resolveLanguage(language, scamText)].voiceHint}
+            </p>
+          )}
 
           {scam && !scam.ok && (
             <p className="tc-warn">
@@ -781,6 +872,38 @@ export default function TrueCost({ mode = 'all' }) {
                         : t.aiExplanation}
                     </strong>
                     <p>{scamExplanation}</p>
+                  </div>
+                )}
+
+                {wasRedacted && <p className="tc-small">{t.redactedNote}</p>}
+
+                {canSpeak() && (
+                  <div className="tc-row">
+                    <button className="tc-btn secondary" onClick={handleListen}>
+                      {speaking ? t.stopListenButton : t.listenButton}
+                    </button>
+                  </div>
+                )}
+
+                {(scam.level === 'High' || scam.level === 'Medium') && (
+                  <div className="tc-report">
+                    <strong>{t.reportTitle}</strong>
+                    <p>{t.reportText}</p>
+
+                    <div className="tc-row">
+                      <a
+                        className="tc-btn"
+                        href="https://cybercrime.gov.in"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {t.reportSite}
+                      </a>
+
+                      <a className="tc-btn secondary" href="tel:1930">
+                        {t.reportCall}
+                      </a>
+                    </div>
                   </div>
                 )}
 

@@ -125,3 +125,92 @@ export function analyzeLoan(input) {
 
 export const rupees = (n) =>
   '₹' + Math.round(n).toLocaleString('en-IN');
+
+// ---------------------------------------------------------------
+// Affordability + comparison helpers
+// ---------------------------------------------------------------
+
+function affordabilityFor(emi, monthlyIncome, monthlyExpenses) {
+  const income = Number(monthlyIncome);
+  const expenses = Number(monthlyExpenses);
+
+  const moneyLeft = income - expenses;
+  const emiShareOfLeftPercent = moneyLeft > 0 ? (emi / moneyLeft) * 100 : null;
+
+  let verdict;
+  if (moneyLeft <= 0 || emiShareOfLeftPercent > 50) verdict = 'Avoid';
+  else if (emiShareOfLeftPercent > 30) verdict = 'Okay';
+  else verdict = 'Good';
+
+  return { moneyLeft, emiShareOfLeftPercent, verdict };
+}
+
+/**
+ * calculateLoan(terms, money)
+ * terms: { amount, tenureMonths, annualRatePercent, processingFee,
+ *          gstOnFeesPercent, otherCharges }
+ * money: { monthlyIncome, monthlyExpenses }
+ * Throws an Error with a clear message when the input is invalid.
+ */
+export function calculateLoan(terms, money) {
+  if (!terms || !money || typeof terms !== 'object' || typeof money !== 'object') {
+    throw new Error('Loan terms and affordability inputs are required.');
+  }
+
+  if (!(Number(terms.amount) > 0)) {
+    throw new Error('Loan amount must be above 0.');
+  }
+
+  const tenure = Number(terms.tenureMonths);
+  if (!Number.isInteger(tenure) || tenure <= 0) {
+    throw new Error('Tenure must be a positive whole number.');
+  }
+
+  const loan = analyzeLoan({
+    amount: terms.amount,
+    annualRate: terms.annualRatePercent ?? 0,
+    months: tenure,
+    rateType: terms.rateType === 'flat' ? 'flat' : 'reducing',
+    processingFee: terms.processingFee ?? 0,
+    gstPct: terms.gstOnFeesPercent ?? 18,
+    otherCharges: terms.otherCharges ?? 0,
+  });
+
+  if (!loan.ok) {
+    throw new Error(loan.errors[0]);
+  }
+
+  const afford = affordabilityFor(loan.emi, money.monthlyIncome, money.monthlyExpenses);
+
+  return {
+    ...loan,
+    fees: loan.processingFee,
+    gstAmount: loan.gstOnFee,
+    ...afford,
+  };
+}
+
+/**
+ * compareLoanOffers(offerA, offerB, money)
+ * The cheaper offer is the one with the lower total cost of borrowing
+ * (everything you pay minus the money you actually receive).
+ */
+export function compareLoanOffers(offerA, offerB, money) {
+  const a = calculateLoan(offerA, money);
+  const b = calculateLoan(offerB, money);
+
+  const costA = a.totalCostOfBorrowing;
+  const costB = b.totalCostOfBorrowing;
+  const difference = Math.round(Math.abs(costA - costB) * 100) / 100;
+
+  let betterOffer;
+  if (difference < 0.005) betterOffer = 'Both offers have equal total costs';
+  else betterOffer = costA < costB ? 'Offer A' : 'Offer B';
+
+  return {
+    offerA: a,
+    offerB: b,
+    betterOffer,
+    savings: difference < 0.005 ? 0 : difference,
+  };
+}

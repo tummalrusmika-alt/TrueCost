@@ -1,12 +1,12 @@
-
 import { useState } from 'react';
 import TrueCost from './logic/TrueCost.jsx';
+import Compare from './logic/Compare.jsx';
 import './App.css';
 
 export default function App() {
   const [page, setPage] = useState('home');
 
-  if (page === 'loan' || page === 'scam') {
+  if (page === 'loan' || page === 'scam' || page === 'compare') {
     return (
       <>
         <header className="tc-nav">
@@ -20,7 +20,11 @@ export default function App() {
           </button>
         </header>
 
-        <TrueCost key={page} mode={page} />
+        {page === 'compare' ? (
+          <Compare key={page} />
+        ) : (
+          <TrueCost key={page} mode={page} />
+        )}
       </>
     );
   }
@@ -58,6 +62,13 @@ export default function App() {
             <div className="tc-home-buttons">
               <button onClick={() => setPage('loan')}>
                 Calculate My Loan →
+              </button>
+
+              <button
+                className="tc-outline"
+                onClick={() => setPage('compare')}
+              >
+                Compare Offers
               </button>
 
               <button
@@ -125,6 +136,17 @@ export default function App() {
               </p>
               <button onClick={() => setPage('loan')}>
                 Check affordability →
+              </button>
+            </article>
+
+            <article>
+              <h3>Compare Two Offers</h3>
+              <p>
+                See which loan offer really costs less once fees, GST and
+                other charges are counted.
+              </p>
+              <button onClick={() => setPage('compare')}>
+                Compare now →
               </button>
             </article>
 

@@ -1,6 +1,8 @@
 // src/logic/translations.js
 // Language detection and screen text for English, Telugu and Hindi.
 
+import { FLAG_TEXT } from './scamRules.js';
+
 export const LANGUAGE_OPTIONS = [
   { value: 'auto', label: 'Auto-detect' },
   { value: 'en', label: 'English' },
@@ -34,6 +36,18 @@ export function resolveLanguage(choice, text) {
 
 export const UI = {
   en: {
+    speakButton: '🎤 Speak the message',
+    listeningButton: '🎙 Listening... tap to stop',
+    listenButton: '🔊 Listen to the result',
+    stopListenButton: '⏹ Stop audio',
+    voiceHint: 'Choose your language first, then tap the microphone.',
+    privacyNote:
+      'Privacy: OTPs, phone, card, Aadhaar and PAN numbers are hidden before anything is sent to AI. Nothing you paste is stored.',
+    redactedNote: 'Some sensitive numbers were hidden before the AI saw your message.',
+    reportTitle: 'Report this scam',
+    reportText: 'If you shared money, OTP or bank details, call your bank now and report it.',
+    reportSite: 'Report on cybercrime.gov.in',
+    reportCall: 'Call helpline 1930',
     languageLabel: 'Language',
     scamTitle: 'Check a loan message for scam signs',
     scamPlaceholder: 'Paste a loan SMS / WhatsApp message here',
@@ -62,6 +76,18 @@ export const UI = {
   },
 
   te: {
+    speakButton: '🎤 సందేశాన్ని చెప్పండి',
+    listeningButton: '🎙 వింటోంది... ఆపడానికి నొక్కండి',
+    listenButton: '🔊 ఫలితాన్ని వినండి',
+    stopListenButton: '⏹ ఆడియో ఆపండి',
+    voiceHint: 'ముందుగా మీ భాషను ఎంచుకుని, ఆపై మైక్రోఫోన్ నొక్కండి.',
+    privacyNote:
+      'గోప్యత: OTP, ఫోన్, కార్డ్, ఆధార్, PAN నంబర్లు AI కి పంపే ముందు దాచబడతాయి. మీరు అతికించిన దేనినీ మేము నిల్వ చేయము.',
+    redactedNote: 'AI చూసే ముందు కొన్ని సున్నితమైన నంబర్లు దాచబడ్డాయి.',
+    reportTitle: 'ఈ మోసాన్ని నివేదించండి',
+    reportText: 'మీరు డబ్బు, OTP లేదా బ్యాంక్ వివరాలు పంచుకుంటే, వెంటనే మీ బ్యాంక్‌కు కాల్ చేసి ఫిర్యాదు చేయండి.',
+    reportSite: 'cybercrime.gov.in లో ఫిర్యాదు చేయండి',
+    reportCall: 'హెల్ప్‌లైన్ 1930 కు కాల్ చేయండి',
     languageLabel: 'భాష',
     scamTitle: 'రుణ సందేశంలో మోసం సంకేతాలను తనిఖీ చేయండి',
     scamPlaceholder: 'రుణ SMS / WhatsApp సందేశాన్ని ఇక్కడ అతికించండి',
@@ -90,6 +116,18 @@ export const UI = {
   },
 
   hi: {
+    speakButton: '🎤 संदेश बोलकर बताएं',
+    listeningButton: '🎙 सुन रहा है... रोकने के लिए दबाएं',
+    listenButton: '🔊 परिणाम सुनें',
+    stopListenButton: '⏹ ऑडियो रोकें',
+    voiceHint: 'पहले अपनी भाषा चुनें, फिर माइक्रोफोन दबाएं।',
+    privacyNote:
+      'गोपनीयता: OTP, फोन, कार्ड, आधार और PAN नंबर AI को भेजने से पहले छिपा दिए जाते हैं। आप जो चिपकाते हैं उसे हम सहेजते नहीं हैं।',
+    redactedNote: 'AI के देखने से पहले कुछ संवेदनशील नंबर छिपा दिए गए।',
+    reportTitle: 'इस धोखाधड़ी की शिकायत करें',
+    reportText: 'यदि आपने पैसे, OTP या बैंक जानकारी साझा की है, तो तुरंत अपने बैंक को कॉल करें और शिकायत करें।',
+    reportSite: 'cybercrime.gov.in पर शिकायत करें',
+    reportCall: 'हेल्पलाइन 1930 पर कॉल करें',
     languageLabel: 'भाषा',
     scamTitle: 'ऋण संदेश में धोखाधड़ी के संकेत जांचें',
     scamPlaceholder: 'ऋण SMS / WhatsApp संदेश यहां चिपकाएं',
@@ -123,15 +161,8 @@ export const UI = {
 // ---------------------------------------------------------------
 
 const FLAGS = {
-  en: {
-    fee: 'Asks for a fee or payment before the loan is given.',
-    sensitive:
-      'Mentions sensitive information such as OTP, PIN or banking credentials. Never share these details.',
-    urgency: 'Creates urgency or pressures the user to act quickly.',
-    approval: 'Makes loan approval claims that need independent verification.',
-    link: 'Contains a link that should be verified before opening.',
-    bank: 'Claims to represent a bank or financial institution. Verify this identity independently.',
-  },
+  en: { ...FLAG_TEXT },
+
   te: {
     fee: 'రుణం ఇవ్వడానికి ముందు రుసుము లేదా చెల్లింపు అడుగుతోంది.',
     sensitive:
@@ -140,7 +171,13 @@ const FLAGS = {
     approval: 'రుణ ఆమోదం గురించి చేసిన వాదనలను స్వతంత్రంగా ధృవీకరించాలి.',
     link: 'తెరవడానికి ముందు ధృవీకరించవలసిన లింక్ ఇందులో ఉంది.',
     bank: 'బ్యాంకు లేదా ఆర్థిక సంస్థ ప్రతినిధిగా చెప్పుకుంటోంది. ఆ గుర్తింపును స్వతంత్రంగా ధృవీకరించండి.',
+    kyc: 'KYC అప్‌డేట్ లేదా ఖాతా బ్లాక్ గురించి చెబుతోంది. బ్యాంకులు సందేశాలు లేదా లింక్‌ల ద్వారా KYC చేయమని అడగవు.',
+    apk: 'యాప్ లేదా APK ఫైల్ డౌన్‌లోడ్ చేయమని అడుగుతోంది. అధికారిక యాప్ స్టోర్ నుండి మాత్రమే యాప్‌లను ఇన్‌స్టాల్ చేయండి.',
+    threat: 'పోలీసు చర్య, చట్టపరమైన చర్య లేదా మీ కాంటాక్ట్స్, ఫోటోలు పంచుకుంటామనే బెదిరింపులు ఉన్నాయి.',
+    upi: 'UPI కలెక్ట్ రిక్వెస్ట్ ఆమోదించమని లేదా QR కోడ్ స్కాన్ చేయమని అడుగుతోంది. డబ్బు పొందడానికి ఇది అవసరం లేదు.',
+    release: 'రుణాన్ని విడుదల చేయడానికి డబ్బు అడుగుతోంది. నిజమైన రుణదాతలు ఛార్జీలను రుణం నుండి తీసుకుంటారు లేదా స్పష్టంగా తెలియజేస్తారు.',
   },
+
   hi: {
     fee: 'ऋण देने से पहले शुल्क या भुगतान मांगा जा रहा है।',
     sensitive:
@@ -149,18 +186,30 @@ const FLAGS = {
     approval: 'ऋण स्वीकृति के दावों की स्वतंत्र रूप से पुष्टि करना आवश्यक है।',
     link: 'इसमें एक लिंक है जिसे खोलने से पहले सत्यापित करना चाहिए।',
     bank: 'बैंक या वित्तीय संस्था का प्रतिनिधि होने का दावा किया जा रहा है। इस पहचान की स्वतंत्र रूप से पुष्टि करें।',
+    kyc: 'KYC अपडेट या खाता ब्लॉक होने की बात कही गई है। बैंक संदेश या लिंक के जरिए KYC पूरा करने को नहीं कहते।',
+    apk: 'ऐप या APK फाइल डाउनलोड करने को कहा जा रहा है। ऐप केवल आधिकारिक ऐप स्टोर से ही इंस्टॉल करें।',
+    threat: 'पुलिस कार्रवाई, कानूनी कार्रवाई या आपके कॉन्टैक्ट्स और फोटो साझा करने जैसी धमकियां दी गई हैं।',
+    upi: 'UPI कलेक्ट रिक्वेस्ट स्वीकार करने या QR कोड स्कैन करने को कहा जा रहा है। पैसे पाने के लिए ऐसा करना जरूरी नहीं है।',
+    release: 'ऋण जारी करने के लिए पैसे मांगे जा रहे हैं। असली ऋणदाता शुल्क ऋण राशि से काटते हैं या स्पष्ट रूप से बताते हैं।',
   },
 };
 
-// Order matters: specific checks first. "pin" is matched as a whole word
-// so that words such as "opening" are not mistaken for a PIN request.
+// Translates a warning produced by scamRules.js.
+// 1) Exact match on the English text, 2) simple keyword fallback.
 export function translateFlag(flag, language) {
   const text = FLAGS[language] || FLAGS.en;
+
+  const exact = Object.keys(FLAG_TEXT).find((key) => FLAG_TEXT[key] === flag);
+  if (exact) return text[exact];
+
   const value = String(flag).toLowerCase();
 
-  if (value.includes('represent a bank') || value.includes('financial institution')) {
-    return text.bank;
-  }
+  if (value.includes('represent a bank')) return text.bank;
+  if (value.includes('kyc')) return text.kyc;
+  if (value.includes('apk')) return text.apk;
+  if (value.includes('upi')) return text.upi;
+  if (value.includes('threat')) return text.threat;
+  if (value.includes('release')) return text.release;
   if (value.includes('link')) return text.link;
   if (value.includes('approval claims')) return text.approval;
   if (value.includes('sensitive') || /\b(otp|pin|cvv)\b/.test(value)) {
@@ -240,3 +289,101 @@ export function getNextSteps(level, language) {
   const group = STEPS[language] || STEPS.en;
   return group[level] || group.Low;
 }
+
+
+// ---------------------------------------------------------------
+// Compare offers screen
+// ---------------------------------------------------------------
+
+export const COMPARE_UI = {
+  en: {
+    title: 'Compare two loan offers',
+    intro: 'Enter both offers. TrueCost shows which one really costs less.',
+    offerA: 'Offer A',
+    offerB: 'Offer B',
+    amount: 'Loan amount (₹)',
+    rate: 'Interest rate (% per year)',
+    months: 'Tenure (months)',
+    fee: 'Processing fee (₹)',
+    gst: 'GST on fee (%)',
+    other: 'Other charges, total (₹)',
+    income: 'Monthly income (₹, optional)',
+    expenses: 'Monthly expenses (₹, optional)',
+    compareButton: 'Compare offers',
+    sampleButton: 'Load sample offers',
+    clearButton: 'Clear',
+    emi: 'Monthly EMI',
+    effective: 'Effective rate',
+    totalPaid: 'Total you pay',
+    hidden: 'Hidden extra',
+    received: 'Money you actually receive',
+    cost: 'Total cost of borrowing',
+    verdictLabel: 'Affordability',
+    equal: 'Both offers have the same total cost.',
+    cheaper: (name, amount) => `${name} costs ${amount} less.`,
+    better: 'Cheaper',
+    fixErrors: 'Please fix the highlighted problems:',
+    note: 'The calculator performs every calculation. This is educational, not financial advice.',
+    verdicts: { Good: 'Good', Okay: 'Okay', Avoid: 'Avoid' },
+  },
+  te: {
+    title: 'రెండు రుణ ఆఫర్లను పోల్చండి',
+    intro: 'రెండు ఆఫర్ల వివరాలు నమోదు చేయండి. ఏది నిజంగా తక్కువ ఖర్చో TrueCost చూపుతుంది.',
+    offerA: 'ఆఫర్ A',
+    offerB: 'ఆఫర్ B',
+    amount: 'రుణ మొత్తం (₹)',
+    rate: 'వడ్డీ రేటు (సంవత్సరానికి %)',
+    months: 'కాలవ్యవధి (నెలలు)',
+    fee: 'ప్రాసెసింగ్ ఫీజు (₹)',
+    gst: 'ఫీజుపై GST (%)',
+    other: 'ఇతర ఛార్జీలు, మొత్తం (₹)',
+    income: 'నెలవారీ ఆదాయం (₹, ఐచ్ఛికం)',
+    expenses: 'నెలవారీ ఖర్చులు (₹, ఐచ్ఛికం)',
+    compareButton: 'ఆఫర్లను పోల్చండి',
+    sampleButton: 'నమూనా ఆఫర్లను లోడ్ చేయండి',
+    clearButton: 'క్లియర్',
+    emi: 'నెలవారీ EMI',
+    effective: 'ప్రభావవంతమైన రేటు',
+    totalPaid: 'మీరు చెల్లించే మొత్తం',
+    hidden: 'దాచిన అదనపు ఖర్చు',
+    received: 'మీకు నిజంగా అందే డబ్బు',
+    cost: 'రుణం తీసుకోవడానికి మొత్తం ఖర్చు',
+    verdictLabel: 'భరించగలగడం',
+    equal: 'రెండు ఆఫర్ల మొత్తం ఖర్చు సమానం.',
+    cheaper: (name, amount) => `${name} ${amount} తక్కువ ఖర్చు.`,
+    better: 'తక్కువ ఖర్చు',
+    fixErrors: 'దయచేసి ఈ సమస్యలను సరిచేయండి:',
+    note: 'అన్ని లెక్కలు కాలిక్యులేటర్ చేస్తుంది. ఇది విద్యా ప్రయోజనం కోసం మాత్రమే, ఆర్థిక సలహా కాదు.',
+    verdicts: { Good: 'మంచిది', Okay: 'పరవాలేదు', Avoid: 'వద్దు' },
+  },
+  hi: {
+    title: 'दो ऋण ऑफर की तुलना करें',
+    intro: 'दोनों ऑफर की जानकारी भरें। TrueCost बताएगा कि असल में कौन सा सस्ता है।',
+    offerA: 'ऑफर A',
+    offerB: 'ऑफर B',
+    amount: 'ऋण राशि (₹)',
+    rate: 'ब्याज दर (प्रति वर्ष %)',
+    months: 'अवधि (महीने)',
+    fee: 'प्रोसेसिंग फीस (₹)',
+    gst: 'फीस पर GST (%)',
+    other: 'अन्य शुल्क, कुल (₹)',
+    income: 'मासिक आय (₹, वैकल्पिक)',
+    expenses: 'मासिक खर्च (₹, वैकल्पिक)',
+    compareButton: 'ऑफर की तुलना करें',
+    sampleButton: 'नमूना ऑफर लोड करें',
+    clearButton: 'साफ करें',
+    emi: 'मासिक EMI',
+    effective: 'प्रभावी दर',
+    totalPaid: 'आप कुल कितना चुकाएंगे',
+    hidden: 'छिपा हुआ अतिरिक्त खर्च',
+    received: 'आपको वास्तव में मिलने वाली राशि',
+    cost: 'ऋण लेने की कुल लागत',
+    verdictLabel: 'वहन क्षमता',
+    equal: 'दोनों ऑफर की कुल लागत समान है।',
+    cheaper: (name, amount) => `${name} ${amount} सस्ता है।`,
+    better: 'सस्ता',
+    fixErrors: 'कृपया इन समस्याओं को ठीक करें:',
+    note: 'सभी गणना कैलकुलेटर करता है। यह केवल शैक्षिक जानकारी है, वित्तीय सलाह नहीं।',
+    verdicts: { Good: 'अच्छा', Okay: 'ठीक है', Avoid: 'न लें' },
+  },
+};
